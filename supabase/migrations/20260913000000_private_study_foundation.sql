@@ -771,13 +771,14 @@ returns table (
   mastery_estimate real,
   attempt_count integer,
   next_review_at timestamptz,
-  updated_at timestamptz
+  updated_at timestamptz,
+  misconception_tags text[]
 )
 language sql
 stable
 security definer
 set search_path = private, public
-as $$
+as $
   select
     topic.subject,
     mastery.topic_id,
@@ -785,7 +786,30 @@ as $$
     mastery.mastery_estimate,
     mastery.attempt_count,
     mastery.next_review_at,
-    mastery.updated_at
+    mastery.updated_at,
+    coalesce(
+      (
+        select array_agg(
+          ranked.tag
+          order by ranked.occurrences desc, ranked.tag
+        )
+        from (
+          select
+            tag,
+            count(*) as occurrences
+          from private.learning_events event
+          cross join lateral unnest(
+            event.misconception_tags
+          ) tag
+          where event.student_id = mastery.student_id
+            and event.topic_id = mastery.topic_id
+          group by tag
+          order by count(*) desc, tag
+          limit 3
+        ) ranked
+      ),
+      '{}'::text[]
+    ) as misconception_tags
   from private.topic_mastery mastery
   join private.topics topic on topic.id = mastery.topic_id
   where mastery.student_id = p_student_id
@@ -794,7 +818,7 @@ as $$
     mastery.mastery_estimate asc,
     mastery.next_review_at asc nulls first,
     mastery.topic_id;
-$$;
+$;
 
 revoke all on function public.record_private_learning_attempt(uuid, jsonb, jsonb)
   from public, anon, authenticated;
