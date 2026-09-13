@@ -2,6 +2,9 @@ const PROTECTED_DIRECTORY_PREFIXES = [
   "private-sources/",
   "private-index/",
   "data/ingestion-reports/",
+  "training/private-data/",
+  "training/outputs/",
+  "training/checkpoints/",
 ];
 
 const PROTECTED_EXACT_PATHS = new Set(["data/source-manifest.jsonl"]);
@@ -17,7 +20,11 @@ const PROTECTED_EXTENSIONS = new Set([
   ".safetensors",
 ]);
 
-const ALLOWED_PATHS = new Set([".env.example", "data/source-manifest.example.jsonl"]);
+const ALLOWED_PATHS = new Set([
+  ".env.example",
+  "data/source-manifest.example.jsonl",
+  "training/dataset.example.jsonl",
+]);
 
 function normalizePath(path: string): string {
   return path.replaceAll("\\", "/").replace(/^\.\//, "");
@@ -33,11 +40,15 @@ function hasProtectedExtension(path: string): boolean {
   return [...PROTECTED_EXTENSIONS].some((extension) => lowerCasePath.endsWith(extension));
 }
 
+function isProtectedTrainingDataset(path: string): boolean {
+  return path.startsWith("training/") && path.toLowerCase().endsWith(".jsonl");
+}
+
 /**
  * Returns paths that must not be added to the public repository.
  *
  * The function deliberately operates on paths only. It never reads or logs the
- * content of a licensed source, manifest, or environment file.
+ * content of a licensed source, manifest, environment file, or training set.
  */
 export function findPrivateBoundaryViolations(paths: string[]): string[] {
   return paths.filter((path) => {
@@ -51,6 +62,7 @@ export function findPrivateBoundaryViolations(paths: string[]): string[] {
       PROTECTED_EXACT_PATHS.has(normalizedPath) ||
       PROTECTED_DIRECTORY_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix)) ||
       isProtectedDotenvPath(normalizedPath) ||
+      isProtectedTrainingDataset(normalizedPath) ||
       hasProtectedExtension(normalizedPath)
     );
   });

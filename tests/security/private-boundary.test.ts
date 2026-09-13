@@ -17,12 +17,13 @@ describe("private study boundary", () => {
     ]);
   });
 
-  it("allows code, documentation, and the empty manifest example", () => {
+  it("allows code, documentation, and explicit empty/synthetic examples", () => {
     expect(
       findPrivateBoundaryViolations([
         "lib/retrieval.ts",
         "docs/INGESTION.md",
         "data/source-manifest.example.jsonl",
+        "training/dataset.example.jsonl",
       ]),
     ).toEqual([]);
   });
@@ -38,6 +39,22 @@ describe("private study boundary", () => {
       "uploads/chemistry.PDF",
       ".env.production",
       "models/tutor.gguf",
+    ]);
+  });
+
+  it("rejects private training data, outputs and checkpoints", () => {
+    expect(
+      findPrivateBoundaryViolations([
+        "training/train.jsonl",
+        "training/private-data/train.jsonl",
+        "training/outputs/metrics.json",
+        "training/checkpoints/adapter.bin",
+      ]),
+    ).toEqual([
+      "training/train.jsonl",
+      "training/private-data/train.jsonl",
+      "training/outputs/metrics.json",
+      "training/checkpoints/adapter.bin",
     ]);
   });
 });

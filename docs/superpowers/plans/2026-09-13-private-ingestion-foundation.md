@@ -452,7 +452,7 @@ Document local-only commands:
 
 Explain authorized browser downloading, resume/duplicate behavior, page/OCR reporting, ambiguous pairing review, private Supabase migration prerequisites, and no-paid-service status. State M25 English HL is the first paper target; M26 remains question-only until matching schemes are normally obtained.
 
-- [ ] **Step 4: Run final verification, prove source privacy, and push**
+- [x] **Step 4: Run final verification, prove source privacy, and push**
 
 Run: git diff --check && npm run verify:private && npm test && npm run typecheck && npm run build && git status --short
 Expected: no whitespace/private-boundary violations; all checks exit 0; unrelated pre-existing status is reported but not staged.

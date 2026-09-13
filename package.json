@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:private": "tsx scripts/verify-private-boundary.ts"
+    "verify:private": "tsx scripts/verify-private-boundary.ts",
+    "training:validate": "tsx scripts/validate-training-dataset.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

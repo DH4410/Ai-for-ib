@@ -25,3 +25,10 @@ models/
 *.doc
 *.docx
 *.epub
+
+# Real fine-tuning/evaluation data and generated artifacts stay private.
+training/private-data/
+training/outputs/
+training/checkpoints/
+training/**/*.jsonl
+!training/dataset.example.jsonl
