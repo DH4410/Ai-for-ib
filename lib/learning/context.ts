@@ -21,13 +21,19 @@ export function formatLearnerContext(
         Date.parse(item.nextReviewAt) <= nowTime
           ? "review due"
           : "review scheduled";
+      const mistakes =
+        item.misconceptionTags.length > 0
+          ? ` · recurring mistakes: ${item.misconceptionTags.join(", ")}`
+          : "";
 
-      return [
-        item.label,
-        `${mastery}% mastery`,
-        `${item.attemptCount} attempt${item.attemptCount === 1 ? "" : "s"}`,
-        due,
-      ].join(" · ");
+      return (
+        [
+          item.label,
+          `${mastery}% mastery`,
+          `${item.attemptCount} attempt${item.attemptCount === 1 ? "" : "s"}`,
+          due,
+        ].join(" · ") + mistakes
+      );
     })
     .join("\n");
 }

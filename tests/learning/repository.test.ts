@@ -84,6 +84,7 @@ describe("learning progress repository", () => {
                 subject: "mathematics",
                 topic_id: "mathematics.functions",
                 updated_at: "2026-09-13T18:00:00.000Z",
+                misconception_tags: ["algebra", "formula"],
               },
             ],
             error: null,
@@ -127,6 +128,7 @@ describe("learning progress repository", () => {
     expect(progress[0]).toMatchObject({
       label: "Functions",
       masteryEstimate: 0.62,
+      misconceptionTags: ["algebra", "formula"],
       topicId: "mathematics.functions",
     });
   });

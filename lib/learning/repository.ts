@@ -14,6 +14,7 @@ export type LearningEventInput = LearningAttempt & {
 
 export type LearningProgressRow = TopicMasteryState & {
   label: string;
+  misconceptionTags: string[];
 };
 
 export interface LearningProgressRepository {
@@ -43,6 +44,7 @@ type ProgressRpcRow = {
   attempt_count: number;
   next_review_at: string;
   updated_at: string;
+  misconception_tags: string[] | null;
 };
 
 function assertStudentId(studentId: string): void {
@@ -130,6 +132,7 @@ export class SupabaseLearningProgressRepository
       attemptCount: row.attempt_count,
       label: row.label,
       masteryEstimate: row.mastery_estimate,
+      misconceptionTags: row.misconception_tags ?? [],
       nextReviewAt: row.next_review_at,
       subject: row.subject,
       topicId: row.topic_id,
@@ -154,6 +157,12 @@ export class InMemoryLearningProgressRepository
     this.rows.set(key, {
       ...mastery,
       label: current?.label ?? attempt.topicId,
+      misconceptionTags: [
+        ...new Set([
+          ...(attempt.misconceptionTags ?? []),
+          ...(current?.misconceptionTags ?? []),
+        ]),
+      ].slice(0, 3),
     });
   }
 

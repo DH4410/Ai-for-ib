@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import { formatLearnerContext } from "@/lib/learning/context";
 
 describe("learner context", () => {
-  it("summarizes weak/due mastery without exposing event history", () => {
+  it("summarizes weak/due mastery and recurring mistakes without exposing event history", () => {
     const result = formatLearnerContext(
       [
         {
           attemptCount: 3,
           label: "Functions",
           masteryEstimate: 0.42,
+          misconceptionTags: ["algebra", "formula"],
           nextReviewAt: "2026-09-13T10:00:00.000Z",
           subject: "mathematics",
           topicId: "mathematics.functions",
@@ -21,6 +22,9 @@ describe("learner context", () => {
 
     expect(result).toContain("Functions · 42% mastery");
     expect(result).toContain("review due");
+    expect(result).toContain(
+      "recurring mistakes: algebra, formula",
+    );
     expect(result).not.toContain("student_id");
   });
 
