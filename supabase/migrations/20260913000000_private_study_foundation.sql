@@ -614,6 +614,7 @@ as $$
   left join private.past_paper_question_topics mapping
     on mapping.past_paper_question_id = question.id
   where question.subject = p_subject
+    and cardinality(question.asset_references) = 0
     and (
       cardinality(p_years) = 0
       or question.year = any(p_years)
@@ -1112,7 +1113,11 @@ begin
         then nullif(question.value->>'markscheme_text', '')
       else null
     end,
-    '{}'::text[],
+    array(
+      select jsonb_array_elements_text(
+        coalesce(question.value->'asset_references', '[]'::jsonb)
+      )
+    ),
     question.value->>'pairing_status'
   from jsonb_array_elements(p_questions) question(value);
 
