@@ -804,3 +804,341 @@ grant execute on function public.record_private_learning_attempt(uuid, jsonb, js
   to service_role;
 grant execute on function public.get_private_learning_progress(uuid, text)
   to service_role;
+
+
+create or replace function public.index_private_past_paper(
+  p_question_document jsonb,
+  p_question_version jsonb,
+  p_markscheme_document jsonb,
+  p_markscheme_version jsonb,
+  p_questions jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = private, public, extensions
+as $$
+declare
+  v_question_document_id uuid;
+  v_question_version_id uuid;
+  v_markscheme_document_id uuid;
+  v_markscheme_version_id uuid;
+  v_question_count integer;
+  v_paired_question_count integer;
+begin
+  if jsonb_typeof(p_question_document) <> 'object'
+    or jsonb_typeof(p_question_version) <> 'object' then
+    raise exception 'question document and version must be JSON objects';
+  end if;
+
+  p_questions := coalesce(p_questions, '[]'::jsonb);
+  if jsonb_typeof(p_questions) <> 'array' then
+    raise exception 'p_questions must be a JSON array';
+  end if;
+
+  if p_question_document->>'document_kind' <> 'question-paper'
+    or p_question_document->>'document_type' <> 'question-paper' then
+    raise exception 'question document must be a question paper';
+  end if;
+
+  if (p_markscheme_document is null) <> (p_markscheme_version is null) then
+    raise exception 'markscheme document and version must be supplied together';
+  end if;
+
+  if p_markscheme_document is not null
+    and (
+      jsonb_typeof(p_markscheme_document) <> 'object'
+      or jsonb_typeof(p_markscheme_version) <> 'object'
+      or p_markscheme_document->>'document_kind' <> 'markscheme'
+      or p_markscheme_document->>'document_type' <> 'markscheme'
+    ) then
+    raise exception 'markscheme metadata is invalid';
+  end if;
+
+  insert into private.documents (
+    source_id,
+    subject,
+    document_type,
+    title,
+    filename,
+    author,
+    publisher,
+    source_provider,
+    source_reference,
+    useful_for_knowledge_base,
+    copyright_status
+  )
+  values (
+    p_question_document->>'source_id',
+    p_question_document->>'subject',
+    p_question_document->>'document_type',
+    p_question_document->>'title',
+    p_question_document->>'filename',
+    nullif(p_question_document->>'author', ''),
+    nullif(p_question_document->>'publisher', ''),
+    p_question_document->>'source_provider',
+    p_question_document->>'source_reference',
+    coalesce(
+      (p_question_document->>'useful_for_knowledge_base')::boolean,
+      true
+    ),
+    p_question_document->>'copyright_status'
+  )
+  on conflict (source_id) do update
+  set
+    subject = excluded.subject,
+    document_type = excluded.document_type,
+    title = excluded.title,
+    filename = excluded.filename,
+    author = excluded.author,
+    publisher = excluded.publisher,
+    source_provider = excluded.source_provider,
+    source_reference = excluded.source_reference,
+    useful_for_knowledge_base = excluded.useful_for_knowledge_base,
+    copyright_status = excluded.copyright_status
+  returning id into v_question_document_id;
+
+  insert into private.document_versions (
+    document_id,
+    checksum_sha256,
+    byte_count,
+    mime_type,
+    storage_path,
+    acquired_at
+  )
+  values (
+    v_question_document_id,
+    p_question_version->>'checksum_sha256',
+    (p_question_version->>'byte_count')::bigint,
+    p_question_version->>'mime_type',
+    p_question_version->>'storage_path',
+    coalesce(
+      nullif(p_question_version->>'acquired_at', '')::timestamptz,
+      now()
+    )
+  )
+  on conflict (document_id, checksum_sha256) do update
+  set
+    byte_count = excluded.byte_count,
+    mime_type = excluded.mime_type,
+    storage_path = excluded.storage_path,
+    acquired_at = excluded.acquired_at
+  returning id into v_question_version_id;
+
+  if p_markscheme_document is not null then
+    insert into private.documents (
+      source_id,
+      subject,
+      document_type,
+      title,
+      filename,
+      author,
+      publisher,
+      source_provider,
+      source_reference,
+      useful_for_knowledge_base,
+      copyright_status
+    )
+    values (
+      p_markscheme_document->>'source_id',
+      p_markscheme_document->>'subject',
+      p_markscheme_document->>'document_type',
+      p_markscheme_document->>'title',
+      p_markscheme_document->>'filename',
+      nullif(p_markscheme_document->>'author', ''),
+      nullif(p_markscheme_document->>'publisher', ''),
+      p_markscheme_document->>'source_provider',
+      p_markscheme_document->>'source_reference',
+      coalesce(
+        (p_markscheme_document->>'useful_for_knowledge_base')::boolean,
+        true
+      ),
+      p_markscheme_document->>'copyright_status'
+    )
+    on conflict (source_id) do update
+    set
+      subject = excluded.subject,
+      document_type = excluded.document_type,
+      title = excluded.title,
+      filename = excluded.filename,
+      author = excluded.author,
+      publisher = excluded.publisher,
+      source_provider = excluded.source_provider,
+      source_reference = excluded.source_reference,
+      useful_for_knowledge_base = excluded.useful_for_knowledge_base,
+      copyright_status = excluded.copyright_status
+    returning id into v_markscheme_document_id;
+
+    insert into private.document_versions (
+      document_id,
+      checksum_sha256,
+      byte_count,
+      mime_type,
+      storage_path,
+      acquired_at
+    )
+    values (
+      v_markscheme_document_id,
+      p_markscheme_version->>'checksum_sha256',
+      (p_markscheme_version->>'byte_count')::bigint,
+      p_markscheme_version->>'mime_type',
+      p_markscheme_version->>'storage_path',
+      coalesce(
+        nullif(p_markscheme_version->>'acquired_at', '')::timestamptz,
+        now()
+      )
+    )
+    on conflict (document_id, checksum_sha256) do update
+    set
+      byte_count = excluded.byte_count,
+      mime_type = excluded.mime_type,
+      storage_path = excluded.storage_path,
+      acquired_at = excluded.acquired_at
+    returning id into v_markscheme_version_id;
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_array_elements(p_questions) question(value)
+    where question.value->>'subject' <> p_question_document->>'subject'
+      or (question.value->>'year')::integer <>
+        (p_question_document->>'year')::integer
+      or lower(question.value->>'paper') <>
+        lower(p_question_document->>'paper')
+      or question.value->>'level' <>
+        p_question_document->>'level'
+      or question.value->>'session' <>
+        p_question_document->>'session'
+      or upper(question.value->>'timezone') <>
+        upper(p_question_document->>'timezone')
+  ) then
+    raise exception 'question metadata does not match the source paper';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_array_elements(p_questions) question(value)
+    where question.value->>'pairing_status' = 'paired'
+      and v_markscheme_document_id is null
+  ) then
+    raise exception 'paired questions require a markscheme document';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_array_elements(p_questions) question(value)
+    cross join lateral jsonb_array_elements_text(
+      coalesce(question.value->'topic_ids', '[]'::jsonb)
+    ) requested(topic_id)
+    left join private.topics topic on topic.id = requested.topic_id
+    where topic.id is null
+  ) then
+    raise exception 'one or more question topic IDs are not in the private taxonomy';
+  end if;
+
+  delete from private.past_paper_questions
+  where source_question_document_id = v_question_document_id;
+
+  insert into private.past_paper_questions (
+    id,
+    source_question_document_id,
+    source_markscheme_document_id,
+    subject,
+    syllabus_version,
+    level,
+    year,
+    session,
+    timezone,
+    paper,
+    question_number,
+    subquestion,
+    marks,
+    command_terms,
+    question_text,
+    markscheme_text,
+    asset_references,
+    pairing_status
+  )
+  select
+    question.value->>'id',
+    v_question_document_id,
+    case
+      when question.value->>'pairing_status' = 'paired'
+        then v_markscheme_document_id
+      else null
+    end,
+    question.value->>'subject',
+    question.value->>'syllabus_version',
+    question.value->>'level',
+    (question.value->>'year')::integer,
+    question.value->>'session',
+    question.value->>'timezone',
+    lower(question.value->>'paper'),
+    question.value->>'question_number',
+    nullif(question.value->>'subquestion', ''),
+    nullif(question.value->>'marks', '')::integer,
+    array(
+      select jsonb_array_elements_text(
+        coalesce(question.value->'command_terms', '[]'::jsonb)
+      )
+    ),
+    question.value->>'question_text',
+    case
+      when question.value->>'pairing_status' = 'paired'
+        then nullif(question.value->>'markscheme_text', '')
+      else null
+    end,
+    '{}'::text[],
+    question.value->>'pairing_status'
+  from jsonb_array_elements(p_questions) question(value);
+
+  insert into private.past_paper_question_topics (
+    past_paper_question_id,
+    topic_id,
+    classification_method,
+    confidence
+  )
+  select
+    question.value->>'id',
+    requested.topic_id,
+    question.value->>'topic_classification_method',
+    (question.value->>'topic_confidence')::real
+  from jsonb_array_elements(p_questions) question(value)
+  cross join lateral jsonb_array_elements_text(
+    coalesce(question.value->'topic_ids', '[]'::jsonb)
+  ) requested(topic_id)
+  join private.topics topic on topic.id = requested.topic_id
+  where question.value->>'topic_classification_method' in (
+    'manual_metadata',
+    'heading_rule',
+    'keyword_rule',
+    'model_assisted'
+  );
+
+  select count(*)::integer,
+         count(*) filter (
+           where pairing_status = 'paired'
+         )::integer
+  into v_question_count, v_paired_question_count
+  from private.past_paper_questions
+  where source_question_document_id = v_question_document_id;
+
+  return jsonb_build_object(
+    'question_document_id', v_question_document_id::text,
+    'markscheme_document_id',
+      case
+        when v_markscheme_document_id is null then null
+        else v_markscheme_document_id::text
+      end,
+    'question_count', v_question_count,
+    'paired_question_count', v_paired_question_count
+  );
+end;
+$$;
+
+revoke all on function public.index_private_past_paper(
+  jsonb, jsonb, jsonb, jsonb, jsonb
+) from public, anon, authenticated;
+grant execute on function public.index_private_past_paper(
+  jsonb, jsonb, jsonb, jsonb, jsonb
+) to service_role;
