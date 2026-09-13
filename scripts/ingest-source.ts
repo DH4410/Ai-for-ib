@@ -105,6 +105,7 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         checksumSha256: result.checksumSha256,
+        chunkCount: result.chunkCount,
         ocrRequiredPageCount: result.ocrRequiredPageCount,
         pageCount: result.pageCount,
         sourceId,

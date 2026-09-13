@@ -84,10 +84,12 @@ For each local source, the pipeline:
 6. extracts each PDF page with its original one-based page number;
 7. classifies unusable/selectable-text-poor pages as `ocr_required`;
 8. writes extracted page data under `private-index/extracted/`;
-9. writes a safe ingestion report under `data/ingestion-reports/`;
-10. appends an `ingested` event to the local manifest.
+9. builds page-aware semantic chunks only from pages with usable selectable text;
+10. classifies those chunks against the current IB topic taxonomy and writes them under `private-index/chunks/`;
+11. writes a safe ingestion report under `data/ingestion-reports/`;
+12. appends an `ingested` event with the real chunk count to the local manifest.
 
-The CLI prints only a safe summary: checksum, page count, OCR-required page count, source ID and status.
+The CLI prints only a safe summary: checksum, page count, chunk count, OCR-required page count, source ID and status.
 
 ## OCR handling
 

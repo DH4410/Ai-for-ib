@@ -33,7 +33,7 @@ afterEach(async () => {
 });
 
 describe("local source ingestion", () => {
-  it("writes extracted text privately but reports only safe page counts", async () => {
+  it("writes extracted pages and topic-classified chunks privately while reporting only safe counts", async () => {
     const directory = await mkdtemp(join(tmpdir(), "ai-for-ib-ingest-"));
     temporaryDirectories.push(directory);
     const inputPath = join(directory, "owned-fixture.pdf");
@@ -41,8 +41,13 @@ describe("local source ingestion", () => {
 
     const result = await ingestLocalSource({
       extractPages: async () => [
-        { pageNumber: 1, text: "Readable owned fixture text ".repeat(4) },
-        { pageNumber: 2, text: "" },
+        {
+          pageNumber: 1,
+          text:
+            "B.1 Specific latent heat\n" +
+            "Readable owned fixture text about specific latent heat. ".repeat(4),
+        },
+        { pageNumber: 2, text: "too short to trust" },
       ],
       inputPath,
       manifestPath: join(directory, "source-manifest.jsonl"),
@@ -53,18 +58,36 @@ describe("local source ingestion", () => {
     });
 
     const extracted = JSON.parse(await readFile(result.extractedPath, "utf8")) as {
-      pages: Array<{ text: string }>;
+      pages: Array<{ extractionMethod: string; text: string }>;
+    };
+    const chunkArtifact = JSON.parse(await readFile(result.chunkPath, "utf8")) as {
+      chunks: Array<{
+        text: string;
+        topicConfidence: number;
+        topicIds: string[];
+        topicClassification: { method: string };
+      }>;
     };
     const report = JSON.parse(await readFile(result.reportPath, "utf8")) as Record<string, unknown>;
 
     expect(extracted.pages[0]?.text).toContain("Readable owned fixture text");
+    expect(extracted.pages[1]?.extractionMethod).toBe("ocr_required");
+    expect(chunkArtifact.chunks).toHaveLength(1);
+    expect(chunkArtifact.chunks[0]).toMatchObject({
+      topicConfidence: 0.98,
+      topicIds: ["physics.b.particulate-matter.specific-latent-heat"],
+      topicClassification: { method: "heading_rule" },
+    });
+    expect(chunkArtifact.chunks[0]?.text).not.toContain("too short to trust");
     expect(report).toMatchObject({
+      chunkCount: 1,
       ocrRequiredPageCount: 1,
       pageCount: 2,
       sourceId: "physics-oxford-2023",
     });
     expect(report).not.toHaveProperty("pages");
     expect((await readManifestEvents(join(directory, "source-manifest.jsonl"))).at(-1)).toMatchObject({
+      chunkCount: 1,
       eventType: "ingested",
       ocrRequiredPageCount: 1,
     });

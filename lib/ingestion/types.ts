@@ -50,6 +50,8 @@ export type IngestLocalSourceRequest = MaterializeLocalSourceRequest & {
 };
 
 export type IngestLocalSourceResult = MaterializeLocalSourceResult & {
+  chunkCount: number;
+  chunkPath: string;
   extractedPath: string;
   ocrRequiredPageCount: number;
   pageCount: number;

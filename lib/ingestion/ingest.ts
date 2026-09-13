@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
 
-import { assessExtractedPage } from "@/lib/ingestion/chunks";
+import { buildSemanticChunks, assessExtractedPage } from "@/lib/ingestion/chunks";
 import { materializeLocalSource } from "@/lib/ingestion/materialize";
 import { extractPdfPages } from "@/lib/ingestion/pdf";
 import type {
@@ -10,6 +10,7 @@ import type {
   IngestLocalSourceResult,
 } from "@/lib/ingestion/types";
 import { appendManifestEvent } from "@/lib/study-source/manifest";
+import { classifyTopics } from "@/lib/taxonomy/classify";
 
 function assertPathInsideRoot(root: string, candidate: string): void {
   const pathFromRoot = relative(root, candidate);
@@ -25,7 +26,7 @@ function safeExtractionErrorSummary(error: unknown): string {
   return code ? `extraction filesystem error: ${code}` : "extraction failed";
 }
 
-function extractedFileName(sourceId: string, checksumSha256: string): string {
+function indexedFileName(sourceId: string, checksumSha256: string): string {
   return `${sourceId}--${checksumSha256}.json`;
 }
 
@@ -47,20 +48,27 @@ export async function ingestLocalSource(
     const extractPages = request.extractPages ?? extractPdfPages;
     const pages = await extractPages(materializedPath);
     const assessedPages = pages.map(assessExtractedPage);
+    const fileName = indexedFileName(request.source.id, materialization.checksumSha256);
     const extractedPath = resolve(
       privateIndexRoot,
       "extracted",
       request.source.subject,
-      extractedFileName(request.source.id, materialization.checksumSha256),
+      fileName,
     );
-    const reportPath = resolve(
-      reportRoot,
-      `${request.source.id}--${materialization.checksumSha256}.json`,
+    const chunkPath = resolve(
+      privateIndexRoot,
+      "chunks",
+      request.source.subject,
+      fileName,
     );
+    const reportPath = resolve(reportRoot, fileName);
     assertPathInsideRoot(privateIndexRoot, extractedPath);
+    assertPathInsideRoot(privateIndexRoot, chunkPath);
     assertPathInsideRoot(reportRoot, reportPath);
 
-    await mkdir(resolve(privateIndexRoot, "extracted", request.source.subject), { recursive: true });
+    await mkdir(resolve(privateIndexRoot, "extracted", request.source.subject), {
+      recursive: true,
+    });
     await writeFile(
       extractedPath,
       `${JSON.stringify(
@@ -76,10 +84,57 @@ export async function ingestLocalSource(
       "utf8",
     );
 
+    const usablePages = assessedPages
+      .filter(({ extractionMethod }) => extractionMethod === "text")
+      .map(({ pageNumber, text }) => ({ pageNumber, text }));
+
+    const chunks =
+      request.source.subject === "ib"
+        ? []
+        : buildSemanticChunks(usablePages, {
+            documentId: request.source.id,
+            subject: request.source.subject,
+          }).map((chunk) => {
+            const classification = classifyTopics({
+              subject: chunk.subject,
+              text: chunk.text,
+              title: chunk.title,
+            });
+
+            return {
+              ...chunk,
+              topicConfidence: classification.confidence,
+              topicIds: classification.topicIds,
+              topicClassification: {
+                method: classification.method,
+                reason: classification.reason,
+              },
+            };
+          });
+
+    await mkdir(resolve(privateIndexRoot, "chunks", request.source.subject), {
+      recursive: true,
+    });
+    await writeFile(
+      chunkPath,
+      `${JSON.stringify(
+        {
+          checksumSha256: materialization.checksumSha256,
+          chunks,
+          documentId: request.source.id,
+          sourceId: request.source.id,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
     const ocrRequiredPageCount = assessedPages.filter(
       ({ extractionMethod }) => extractionMethod === "ocr_required",
     ).length;
     const report = {
+      chunkCount: chunks.length,
       documentType: request.source.documentType,
       materializationStatus: materialization.status,
       ocrRequiredPageCount,
@@ -90,7 +145,7 @@ export async function ingestLocalSource(
     await mkdir(reportRoot, { recursive: true });
     await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     await appendManifestEvent(request.manifestPath, {
-      chunkCount: 0,
+      chunkCount: chunks.length,
       eventType: "ingested",
       failedPageCount: 0,
       occurredAt: new Date().toISOString(),
@@ -101,6 +156,8 @@ export async function ingestLocalSource(
 
     return {
       ...materialization,
+      chunkCount: chunks.length,
+      chunkPath,
       extractedPath,
       ocrRequiredPageCount,
       pageCount: assessedPages.length,
