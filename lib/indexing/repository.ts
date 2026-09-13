@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import type {
   AssessedExtractedPage,
   IngestedContentChunk,
@@ -89,7 +91,11 @@ function parseResult(value: unknown): PrivateStudyIndexResult {
 }
 
 export class SupabasePrivateStudyIndexRepository {
-  constructor(private readonly client: StudyIndexRpcClient) {}
+  private readonly client: StudyIndexRpcClient;
+
+  constructor(client: SupabaseClient | StudyIndexRpcClient) {
+    this.client = client as unknown as StudyIndexRpcClient;
+  }
 
   async replaceSource(
     request: PrivateStudyIndexRequest,
