@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Never commit licensed/private study sources or model weights.
+private-sources/
+models/
+*.gguf
+*.safetensors
