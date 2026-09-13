@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "chemistry-pearson-2025",
+      "subject": "chemistry",
+      "documentType": "textbook",
+      "title": "HL Chemistry Pearson Book 2025",
+      "filename": "HL_Chemistry_pearson_book_2025.pdf",
+      "author": null,
+      "publisher": null,
+      "sourceProvider": "managebac",
+      "sourceReference": "/student/classes/13128084/files/folder/2499868",
+      "usefulForKnowledgeBase": true,
+      "copyrightStatus": "private-licensed",
+      "materializationStatus": "not_materialized"
+    },
+    {
+      "id": "physics-oxford-2023",
+      "subject": "physics",
+      "documentType": "textbook",
+      "title": "Physics Course Companion, Fifth Edition",
+      "filename": "Physics_-_Course_Companion_-_Homer__Piętka_and_Heathcote_-_Fifth_Edition_-_Oxford_2023.pdf",
+      "author": null,
+      "publisher": null,
+      "sourceProvider": "managebac",
+      "sourceReference": "/student/classes/13128109/files/folder/2501362",
+      "usefulForKnowledgeBase": true,
+      "copyrightStatus": "private-licensed",
+      "materializationStatus": "not_materialized"
+    },
+    {
+      "id": "mathematics-aa-hl-higher-book",
+      "subject": "mathematics",
+      "documentType": "textbook",
+      "title": "Mathematics: Analysis and Approaches Higher Level Book",
+      "filename": "Higher_book.pdf",
+      "author": null,
+      "publisher": null,
+      "sourceProvider": "managebac",
+      "sourceReference": "/student/classes/13128101/files/folder/2500795",
+      "usefulForKnowledgeBase": true,
+      "copyrightStatus": "private-licensed",
+      "materializationStatus": "not_materialized"
+    },
+    {
+      "id": "chemistry-m25-english-hl",
+      "subject": "chemistry",
+      "documentType": "question-paper",
+      "title": "May 2025 Chemistry HL English Papers and Markschemes",
+      "filename": "metadata-only-m25-chemistry-hl.json",
+      "author": null,
+      "publisher": null,
+      "sourceProvider": "ibdocs",
+      "sourceReference": "past-papers/2025/may/chemistry",
+      "usefulForKnowledgeBase": true,
+      "copyrightStatus": "private-licensed",
+      "materializationStatus": "not_materialized",
+      "paperScope": {
+        "session": "may",
+        "year": 2025,
+        "level": "HL",
+        "language": "English",
+        "timezones": ["TZ1", "TZ2", "TZ3"],
+        "components": ["P1A", "P1B", "P2"],
+        "requiresMarkscheme": true
+      }
+    },
+    {
+      "id": "physics-m25-english-hl",
+      "subject": "physics",
+      "documentType": "question-paper",
+      "title": "May 2025 Physics HL English Papers and Markschemes",
+      "filename": "metadata-only-m25-physics-hl.json",
+      "author": null,
+      "publisher": null,
+      "sourceProvider": "ibdocs",
+      "sourceReference": "past-papers/2025/may/physics",
+      "usefulForKnowledgeBase": true,
+      "copyrightStatus": "private-licensed",
+      "materializationStatus": "not_materialized",
+      "paperScope": {
+        "session": "may",
+        "year": 2025,
+        "level": "HL",
+        "language": "English",
+        "timezones": ["TZ1", "TZ2", "TZ3"],
+        "components": ["P1A", "P1B", "P2"],
+        "requiresMarkscheme": true
+      }
+    },
+    {
+      "id": "mathematics-aa-m25-english-hl",
+      "subject": "mathematics",
+      "documentType": "question-paper",
+      "title": "May 2025 Mathematics: Analysis and Approaches HL English Papers and Markschemes",
+      "filename": "metadata-only-m25-mathematics-aa-hl.json",
+      "author": null,
+      "publisher": null,
+      "sourceProvider": "ibdocs",
+      "sourceReference": "past-papers/2025/may/mathematics-analysis-and-approaches",
+      "usefulForKnowledgeBase": true,
+      "copyrightStatus": "private-licensed",
+      "materializationStatus": "not_materialized",
+      "paperScope": {
+        "session": "may",
+        "year": 2025,
+        "level": "HL",
+        "language": "English",
+        "timezones": ["TZ1", "TZ2", "TZ3"],
+        "components": ["P1", "P2", "P3"],
+        "requiresMarkscheme": true
+      }
+    }
+  ]
+}

@@ -127,7 +127,7 @@ Run: git commit -m "feat: protect private study sources"
 - Produces SourceDocument, ManifestEvent, appendManifestEvent, readManifestEvents, latestMaterializationBySource, and findDuplicateByChecksum.
 - Manifest data contains only source metadata, checksum, local relative path, state, and safe failure details.
 
-- [ ] **Step 1: Write failing manifest tests**
+- [x] **Step 1: Write failing manifest tests**
 
     it("keeps an append-only start and materialized history", async () => {
       await appendManifestEvent(manifestPath, startedEvent);
@@ -147,19 +147,19 @@ Run: git commit -m "feat: protect private study sources"
       })).rejects.toThrow("forbidden manifest key");
     });
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: npm test -- tests/study-source/manifest.test.ts
 
 Expected: FAIL with module-not-found for the manifest module.
 
-- [ ] **Step 3: Implement contracts and manifest**
+- [x] **Step 3: Implement contracts and manifest**
 
 Define document types and ManifestEvent variants: materialization_started, materialized, duplicate, failed, and ingested. Require ISO timestamp, source ID, status and, where relevant, SHA-256 checksum, byte count, MIME type, and local relative path. Recursively reject keys matching url, token, cookie, authorization, or text.
 
 Append JSONL one line at a time. Report corrupt JSONL with its line number. Calculate latest state without changing old events. Use temporary directories in tests. Populate the example inventory with metadata-only initial records; author and publisher remain null until PDF metadata has been extracted.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run: npm test -- tests/study-source/manifest.test.ts && npm test && npm run verify:private && npm run typecheck && npm run build
 Run: git add lib/study-source data/source-manifest.example.jsonl data/source-inventory.example.json tests/study-source/manifest.test.ts
