@@ -32,3 +32,4 @@ training/outputs/
 training/checkpoints/
 training/**/*.jsonl
 !training/dataset.example.jsonl
+!training/eval.example.jsonl
