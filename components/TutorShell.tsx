@@ -2,8 +2,11 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
+import { ProgressPanel } from "@/components/ProgressPanel";
+import { RecordResult } from "@/components/RecordResult";
 import type {
   ChatTurn,
+  SourceCitation,
   StudyMode,
   Subject,
   TutorResponse,
@@ -54,7 +57,17 @@ const paperYears = Array.from(
 
 type VisibleTurn = ChatTurn & {
   sources?: TutorResponse["sources"];
+  mode?: StudyMode;
+  subject?: Subject;
 };
+
+function progressSource(
+  turn: VisibleTurn,
+): SourceCitation | undefined {
+  return turn.sources?.find(
+    (source) => (source.topicIds?.length ?? 0) > 0,
+  );
+}
 
 export function TutorShell() {
   const [subject, setSubject] = useState<Subject>("physics");
@@ -145,6 +158,8 @@ export function TutorShell() {
           role: "assistant",
           content: payload.answer,
           sources: payload.sources,
+          mode,
+          subject,
         },
       ]);
     } catch (error) {
@@ -196,6 +211,8 @@ export function TutorShell() {
             ))}
           </div>
         </section>
+
+        <ProgressPanel subject={subject} />
 
         <div className="modelStatus">
           <span className="statusDot" />
@@ -382,6 +399,15 @@ export function TutorShell() {
                         </span>
                       ))}
                     </div>
+                  ) : null}
+                  {turn.role === "assistant" &&
+                  turn.mode === "mark" &&
+                  turn.subject &&
+                  progressSource(turn) ? (
+                    <RecordResult
+                      source={progressSource(turn)!}
+                      subject={turn.subject}
+                    />
                   ) : null}
                 </article>
               ))}
