@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 
 import { ProgressPanel } from "@/components/ProgressPanel";
 import { RecordResult } from "@/components/RecordResult";
+import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
 import type {
   ChatTurn,
   SourceCitation,
@@ -127,9 +128,20 @@ export function TutorShell() {
     setLoading(true);
 
     try {
+      const supabase = getBrowserSupabaseClient();
+      const session = supabase
+        ? (await supabase.auth.getSession()).data.session
+        : null;
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? {
+                Authorization: `Bearer ${session.access_token}`,
+              }
+            : {}),
+        },
         body: JSON.stringify({
           subject,
           mode,

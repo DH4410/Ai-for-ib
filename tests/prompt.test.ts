@@ -30,12 +30,33 @@ describe("retrieved-source prompting", () => {
     const prompt = buildSystemPrompt({
       mode: "practice",
       realPastPapersOnly: true,
-      retrievedContext: "No private source passages were retrieved for this question.",
+      retrievedContext:
+        "No private source passages were retrieved for this question.",
       subject: "physics",
     });
 
     expect(prompt).toContain(
       "Never invent, paraphrase, or label a generated question as a real IB past-paper question.",
+    );
+  });
+
+  it("uses mastery only as a personalization hint", () => {
+    const prompt = buildSystemPrompt({
+      learnerContext:
+        "Functions · 42% mastery · 3 attempts · review due",
+      mode: "revise",
+      retrievedContext: "Owned fixture.",
+      subject: "mathematics",
+    });
+
+    expect(prompt).toContain(
+      "Private learner context:\nFunctions · 42% mastery",
+    );
+    expect(prompt).toContain(
+      "must never override source evidence, official marking criteria",
+    );
+    expect(prompt).toContain(
+      "Do not repeatedly announce mastery percentages",
     );
   });
 });

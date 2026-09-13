@@ -21,11 +21,15 @@ export function buildSystemPrompt(args: {
   subject: Subject;
   mode: StudyMode;
   retrievedContext: string;
+  learnerContext?: string;
   realPastPapersOnly?: boolean;
 }): string {
   const strictPastPaperRule = args.realPastPapersOnly
     ? "- The learner explicitly requested real past-paper material. Never invent, paraphrase, or label a generated question as a real IB past-paper question. Use only the retrieved real question records."
     : "";
+  const learnerContext =
+    args.learnerContext ??
+    "No saved mastery data is available for this subject.";
 
   return `You are the private study model inside a standalone IB tutoring application.
 
@@ -41,10 +45,15 @@ Behaviour:
 - For calculations, show enough working for the student to understand the method.
 - For marking, separate definite errors from judgement calls.
 - Prefer helping the student think rather than immediately dumping the final answer.
+- Treat learner mastery data only as a personalization hint. It must never override source evidence, official marking criteria, or the learner's current demonstrated work.
+- Use weaker or review-due topics to adjust explanation depth and practice emphasis when relevant. Do not repeatedly announce mastery percentages unless the learner asks.
 ${strictPastPaperRule}
 
 Mode-specific rule:
 ${modeRules[args.mode]}
+
+Private learner context:
+${learnerContext}
 
 Retrieved private study context:
 ${args.retrievedContext}

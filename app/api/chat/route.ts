@@ -1,22 +1,42 @@
 import { NextResponse } from "next/server";
 
 import {
+  AuthenticationError,
+  isUserAuthConfigured,
+  resolveAuthenticatedUserId,
+} from "@/lib/auth/request-user";
+import {
   ChatRequestValidationError,
   parseChatRequest,
 } from "@/lib/api/chat-request";
+import {
+  isStudyRepositoryConfigured,
+} from "@/lib/database/supabase-server";
+import { formatLearnerContext } from "@/lib/learning/context";
+import {
+  SupabaseLearningProgressRepository,
+} from "@/lib/learning/repository";
 import { generateTutorAnswer } from "@/lib/model";
 import { buildSystemPrompt } from "@/lib/prompt";
 import {
   formatRetrievedContext,
   retrieveStudyContext,
 } from "@/lib/retrieval";
-import type { SourceChunk, TutorResponse } from "@/types/study";
+import type {
+  SourceChunk,
+  Subject,
+  TutorResponse,
+} from "@/types/study";
 
 export const runtime = "nodejs";
 
 type ChatRouteDependencies = {
   generateTutorAnswer: typeof generateTutorAnswer;
   retrieveStudyContext: typeof retrieveStudyContext;
+  loadLearnerContext?: (
+    request: Request,
+    subject: Subject,
+  ) => Promise<string | undefined>;
 };
 
 function toSourceCitation(
@@ -46,13 +66,19 @@ export function createChatPostHandler(
       const body: unknown = await request.json();
       const parsedRequest = parseChatRequest(body);
 
-      const sources = await dependencies.retrieveStudyContext({
-        filters: parsedRequest.filters,
-        limit: 8,
-        mode: parsedRequest.mode,
-        query: parsedRequest.message,
-        subject: parsedRequest.subject,
-      });
+      const [sources, learnerContext] = await Promise.all([
+        dependencies.retrieveStudyContext({
+          filters: parsedRequest.filters,
+          limit: 8,
+          mode: parsedRequest.mode,
+          query: parsedRequest.message,
+          subject: parsedRequest.subject,
+        }),
+        dependencies.loadLearnerContext?.(
+          request,
+          parsedRequest.subject,
+        ) ?? Promise.resolve(undefined),
+      ]);
 
       if (
         parsedRequest.filters?.realPastPapersOnly === true &&
@@ -69,6 +95,7 @@ export function createChatPostHandler(
       }
 
       const system = buildSystemPrompt({
+        learnerContext,
         mode: parsedRequest.mode,
         realPastPapersOnly:
           parsedRequest.filters?.realPastPapersOnly === true,
@@ -98,6 +125,12 @@ export function createChatPostHandler(
           { status: 400 },
         );
       }
+      if (error instanceof AuthenticationError) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 401 },
+        );
+      }
 
       console.error(error);
       return NextResponse.json(
@@ -113,7 +146,36 @@ export function createChatPostHandler(
   };
 }
 
+async function loadProductionLearnerContext(
+  request: Request,
+  subject: Subject,
+): Promise<string | undefined> {
+  if (!request.headers.get("Authorization")) {
+    return undefined;
+  }
+
+  if (
+    !isUserAuthConfigured(process.env) ||
+    !isStudyRepositoryConfigured(process.env)
+  ) {
+    return undefined;
+  }
+
+  const studentId = await resolveAuthenticatedUserId(request);
+  const repository = new SupabaseLearningProgressRepository();
+  const progress = await repository.listTopicMastery(
+    studentId,
+    subject,
+  );
+
+  return formatLearnerContext(
+    progress,
+    new Date().toISOString(),
+  );
+}
+
 export const POST = createChatPostHandler({
   generateTutorAnswer,
+  loadLearnerContext: loadProductionLearnerContext,
   retrieveStudyContext,
 });

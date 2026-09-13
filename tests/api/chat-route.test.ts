@@ -1,14 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
+import { AuthenticationError } from "@/lib/auth/request-user";
 
 describe("chat API route", () => {
   it("returns citations but not private source text from a valid request", async () => {
+    let systemPrompt = "";
     const handler = createChatPostHandler({
-      generateTutorAnswer: async () => ({
-        model: "test-self-hosted-model",
-        text: "A cited explanation.",
-      }),
+      generateTutorAnswer: async ({ system }) => {
+        systemPrompt = system;
+        return {
+          model: "test-self-hosted-model",
+          text: "A cited explanation.",
+        };
+      },
+      loadLearnerContext: async () =>
+        "Particulate matter · 41% mastery · 2 attempts · review due",
       retrieveStudyContext: async () => [
         {
           documentId: "physics-oxford-2023",
@@ -43,6 +50,9 @@ describe("chat API route", () => {
     };
 
     expect(response.status).toBe(200);
+    expect(systemPrompt).toContain(
+      "Particulate matter · 41% mastery",
+    );
     expect(body.sources).toEqual([
       {
         documentType: "textbook",
@@ -97,8 +107,36 @@ describe("chat API route", () => {
     expect(generateTutorAnswer).not.toHaveBeenCalled();
     expect(body.model).toBe("retrieval-only");
     expect(body.sources).toEqual([]);
-    expect(body.answer).toContain(
-      "I won't invent one",
+    expect(body.answer).toContain("I won't invent one");
+  });
+
+  it("returns 401 when an explicitly supplied learner session is invalid", async () => {
+    const handler = createChatPostHandler({
+      generateTutorAnswer: async () => ({
+        model: "never",
+        text: "never",
+      }),
+      loadLearnerContext: async () => {
+        throw new AuthenticationError("expired session");
+      },
+      retrieveStudyContext: async () => [],
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/chat", {
+        body: JSON.stringify({
+          message: "Help me revise",
+          mode: "revise",
+          subject: "chemistry",
+        }),
+        headers: {
+          Authorization: "Bearer expired",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
     );
+
+    expect(response.status).toBe(401);
   });
 });
