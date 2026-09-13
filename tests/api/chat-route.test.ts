@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createChatPostHandler } from "@/app/api/chat/route";
+import {
+  createChatPostHandler,
+  PrivateRetrievalConfigurationError,
+} from "@/app/api/chat/route";
 import { AuthenticationError } from "@/lib/auth/request-user";
 
 describe("chat API route", () => {
@@ -14,7 +17,7 @@ describe("chat API route", () => {
           text: "A cited explanation.",
         };
       },
-      loadLearnerContext: async () =>
+      prepareLearnerContext: async () =>
         "Particulate matter · 41% mastery · 2 attempts · review due",
       retrieveStudyContext: async () => [
         {
@@ -41,7 +44,10 @@ describe("chat API route", () => {
           mode: "learn",
           subject: "physics",
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: "Bearer valid-fixture",
+          "Content-Type": "application/json",
+        },
         method: "POST",
       }),
     );
@@ -69,6 +75,39 @@ describe("chat API route", () => {
     expect(JSON.stringify(body.sources)).not.toContain(
       "Specific latent heat is energy transferred",
     );
+  });
+
+  it("authenticates before private retrieval can run", async () => {
+    const retrieveStudyContext = vi.fn(async () => []);
+    const handler = createChatPostHandler({
+      generateTutorAnswer: async () => ({
+        model: "never",
+        text: "never",
+      }),
+      prepareLearnerContext: async () => {
+        throw new AuthenticationError(
+          "Sign in is required for private study sources.",
+        );
+      },
+      retrieveStudyContext,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/chat", {
+        body: JSON.stringify({
+          message: "Explain this",
+          mode: "learn",
+          subject: "physics",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(retrieveStudyContext).not.toHaveBeenCalled();
   });
 
   it("does not call the model when strict real-paper retrieval finds nothing", async () => {
@@ -116,7 +155,7 @@ describe("chat API route", () => {
         model: "never",
         text: "never",
       }),
-      loadLearnerContext: async () => {
+      prepareLearnerContext: async () => {
         throw new AuthenticationError("expired session");
       },
       retrieveStudyContext: async () => [],
@@ -138,5 +177,38 @@ describe("chat API route", () => {
     );
 
     expect(response.status).toBe(401);
+  });
+
+  it("reports a server configuration error before retrieval when private sources lack auth", async () => {
+    const retrieveStudyContext = vi.fn(async () => []);
+    const handler = createChatPostHandler({
+      generateTutorAnswer: async () => ({
+        model: "never",
+        text: "never",
+      }),
+      prepareLearnerContext: async () => {
+        throw new PrivateRetrievalConfigurationError(
+          "auth required",
+        );
+      },
+      retrieveStudyContext,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/chat", {
+        body: JSON.stringify({
+          message: "Help",
+          mode: "learn",
+          subject: "mathematics",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(retrieveStudyContext).not.toHaveBeenCalled();
   });
 });

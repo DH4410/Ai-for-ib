@@ -30,10 +30,12 @@ import type {
 
 export const runtime = "nodejs";
 
+export class PrivateRetrievalConfigurationError extends Error {}
+
 type ChatRouteDependencies = {
   generateTutorAnswer: typeof generateTutorAnswer;
   retrieveStudyContext: typeof retrieveStudyContext;
-  loadLearnerContext?: (
+  prepareLearnerContext?: (
     request: Request,
     subject: Subject,
   ) => Promise<string | undefined>;
@@ -66,19 +68,23 @@ export function createChatPostHandler(
       const body: unknown = await request.json();
       const parsedRequest = parseChatRequest(body);
 
-      const [sources, learnerContext] = await Promise.all([
-        dependencies.retrieveStudyContext({
+      // Authentication/personalization must complete before any private
+      // retrieval starts. This prevents an anonymous request from probing a
+      // connected licensed source repository.
+      const learnerContext =
+        await dependencies.prepareLearnerContext?.(
+          request,
+          parsedRequest.subject,
+        );
+
+      const sources =
+        await dependencies.retrieveStudyContext({
           filters: parsedRequest.filters,
           limit: 8,
           mode: parsedRequest.mode,
           query: parsedRequest.message,
           subject: parsedRequest.subject,
-        }),
-        dependencies.loadLearnerContext?.(
-          request,
-          parsedRequest.subject,
-        ) ?? Promise.resolve(undefined),
-      ]);
+        });
 
       if (
         parsedRequest.filters?.realPastPapersOnly === true &&
@@ -134,6 +140,14 @@ export function createChatPostHandler(
           { status: 401 },
         );
       }
+      if (
+        error instanceof PrivateRetrievalConfigurationError
+      ) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 503 },
+        );
+      }
 
       console.error(error);
       return NextResponse.json(
@@ -149,23 +163,23 @@ export function createChatPostHandler(
   };
 }
 
-async function loadProductionLearnerContext(
+async function prepareProductionLearnerContext(
   request: Request,
   subject: Subject,
 ): Promise<string | undefined> {
-  if (!request.headers.get("Authorization")) {
+  if (!isStudyRepositoryConfigured(process.env)) {
     return undefined;
   }
 
-  if (
-    !isUserAuthConfigured(process.env) ||
-    !isStudyRepositoryConfigured(process.env)
-  ) {
-    return undefined;
+  if (!isUserAuthConfigured(process.env)) {
+    throw new PrivateRetrievalConfigurationError(
+      "Private study sources are configured without user authentication. Configure Supabase Auth before enabling private retrieval.",
+    );
   }
 
   const studentId = await resolveAuthenticatedUserId(request);
-  const repository = new SupabaseLearningProgressRepository();
+  const repository =
+    new SupabaseLearningProgressRepository();
   const progress = await repository.listTopicMastery(
     studentId,
     subject,
@@ -179,6 +193,7 @@ async function loadProductionLearnerContext(
 
 export const POST = createChatPostHandler({
   generateTutorAnswer,
-  loadLearnerContext: loadProductionLearnerContext,
+  prepareLearnerContext:
+    prepareProductionLearnerContext,
   retrieveStudyContext,
 });
