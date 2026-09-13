@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
+import {
+  buildCapabilityHealth,
+} from "@/lib/health";
+
 export const runtime = "nodejs";
 
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    service: "ai-for-ib",
-    modelConfigured: Boolean(process.env.MODEL_NAME),
-    mockMode: process.env.USE_MOCK_MODEL === "true",
-  });
+  return NextResponse.json(
+    buildCapabilityHealth(process.env),
+  );
 }

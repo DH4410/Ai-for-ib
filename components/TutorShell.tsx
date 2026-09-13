@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
+import { CapabilityStatus } from "@/components/CapabilityStatus";
 import { ProgressPanel } from "@/components/ProgressPanel";
 import { RecordResult } from "@/components/RecordResult";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
@@ -225,6 +226,7 @@ export function TutorShell() {
         </section>
 
         <ProgressPanel subject={subject} />
+        <CapabilityStatus />
 
         <div className="modelStatus">
           <span className="statusDot" />

@@ -800,3 +800,48 @@ button {
     grid-template-columns: repeat(2, minmax(80px, 1fr));
   }
 }
+
+
+.capabilityStatus {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.capability {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  color: #8190a2;
+  font-size: 9px;
+}
+
+.capability b {
+  color: #667689;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.capability.unknown {
+  display: block;
+}
+
+.capabilityDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #596473;
+}
+
+.capabilityDot.ready {
+  background: #6dbb8a;
+  box-shadow: 0 0 8px rgb(109 187 138 / 35%);
+}
+
+@media (max-width: 760px) {
+  .capabilityStatus {
+    display: none;
+  }
+}
