@@ -276,11 +276,18 @@ export function createProgressHandlers(
   };
 }
 
-const handlers = createProgressHandlers({
-  now: () => new Date().toISOString(),
-  repository: new SupabaseLearningProgressRepository(),
-  resolveUserId: resolveAuthenticatedUserId,
-});
+function productionHandlers() {
+  return createProgressHandlers({
+    now: () => new Date().toISOString(),
+    repository: new SupabaseLearningProgressRepository(),
+    resolveUserId: resolveAuthenticatedUserId,
+  });
+}
 
-export const GET = handlers.GET;
-export const POST = handlers.POST;
+export async function GET(request: Request) {
+  return productionHandlers().GET(request);
+}
+
+export async function POST(request: Request) {
+  return productionHandlers().POST(request);
+}
