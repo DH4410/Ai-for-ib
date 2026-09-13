@@ -239,7 +239,7 @@ Run: git commit -m "feat: add page-aware private ingestion"
 - Produces IBDP_TOPICS, classifyTopics, parsePaperMetadata, pairPapersAndMarkschemes, and extractQuestionCandidates.
 - Pair status is exclusively paired, question_only, or ambiguous.
 
-- [ ] **Step 1: Write failing taxonomy and pairing tests**
+- [x] **Step 1: Write failing taxonomy and pairing tests**
 
     it("maps specific latent heat to Physics Theme B with a reason", () => {
       expect(classifyTopics({ subject: "physics", title: "B.1 Specific latent heat", text: "" }))
@@ -260,19 +260,19 @@ Run: git commit -m "feat: add page-aware private ingestion"
       expect(result.pairingStatus).toBe("question_only");
     });
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: npm test -- tests/taxonomy/classify.test.ts tests/past-papers/pairing.test.ts
 
 Expected: FAIL with missing taxonomy/pairing modules.
 
-- [ ] **Step 3: Implement topic and paper logic**
+- [x] **Step 3: Implement topic and paper logic**
 
 Store only short public labels: Chemistry Structure/Reactivity, Physics Themes A through E, Mathematics AA domains. Use trusted manual metadata, normalized title/heading rules, keywords, then unclassified. Return classification method, reason, and confidence; low confidence cannot satisfy strict topic practice selection.
 
 Normalize subject, syllabus version, year, session, timezone, level, paper, language, and document kind. Pair only a unique full key. Missing schemes are question_only; collision is ambiguous. Split papers into question/subquestion candidates with page range, structural locator, and marks only where visible; leave uncertain candidates ambiguous.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run: npm test -- tests/taxonomy/classify.test.ts tests/past-papers/pairing.test.ts tests/past-papers/questions.test.ts && npm test && npm run verify:private && npm run typecheck && npm run build
 Run: git add lib/taxonomy lib/past-papers tests/taxonomy tests/past-papers
