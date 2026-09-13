@@ -1,11 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
 
 describe("chat API route", () => {
   it("returns citations but not private source text from a valid request", async () => {
     const handler = createChatPostHandler({
-      generateTutorAnswer: async () => ({ model: "test-self-hosted-model", text: "A cited explanation." }),
+      generateTutorAnswer: async () => ({
+        model: "test-self-hosted-model",
+        text: "A cited explanation.",
+      }),
       retrieveStudyContext: async () => [
         {
           documentId: "physics-oxford-2023",
@@ -17,19 +20,27 @@ describe("chat API route", () => {
           subject: "physics",
           text: "Specific latent heat is energy transferred during a state change.",
           title: "Physics Course Companion",
-          topicIds: ["physics.b.particulate-matter.specific-latent-heat"],
+          topicIds: [
+            "physics.b.particulate-matter.specific-latent-heat",
+          ],
         },
       ],
     });
 
     const response = await handler(
       new Request("http://localhost/api/chat", {
-        body: JSON.stringify({ message: "Explain specific latent heat", mode: "learn", subject: "physics" }),
+        body: JSON.stringify({
+          message: "Explain specific latent heat",
+          mode: "learn",
+          subject: "physics",
+        }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       }),
     );
-    const body = (await response.json()) as { sources: Array<Record<string, unknown>> };
+    const body = (await response.json()) as {
+      sources: Array<Record<string, unknown>>;
+    };
 
     expect(response.status).toBe(200);
     expect(body.sources).toEqual([
@@ -40,9 +51,54 @@ describe("chat API route", () => {
         pageEnd: 43,
         pageStart: 43,
         title: "Physics Course Companion",
-        topicIds: ["physics.b.particulate-matter.specific-latent-heat"],
+        topicIds: [
+          "physics.b.particulate-matter.specific-latent-heat",
+        ],
       },
     ]);
-    expect(JSON.stringify(body.sources)).not.toContain("Specific latent heat is energy transferred");
+    expect(JSON.stringify(body.sources)).not.toContain(
+      "Specific latent heat is energy transferred",
+    );
+  });
+
+  it("does not call the model when strict real-paper retrieval finds nothing", async () => {
+    const generateTutorAnswer = vi.fn(async () => ({
+      model: "should-not-run",
+      text: "Invented question",
+    }));
+    const handler = createChatPostHandler({
+      generateTutorAnswer,
+      retrieveStudyContext: async () => [],
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/chat", {
+        body: JSON.stringify({
+          filters: {
+            paper: "p2",
+            realPastPapersOnly: true,
+            years: [2025],
+          },
+          message: "Give me a real question",
+          mode: "practice",
+          subject: "physics",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      }),
+    );
+    const body = (await response.json()) as {
+      answer: string;
+      model: string;
+      sources: unknown[];
+    };
+
+    expect(response.status).toBe(200);
+    expect(generateTutorAnswer).not.toHaveBeenCalled();
+    expect(body.model).toBe("retrieval-only");
+    expect(body.sources).toEqual([]);
+    expect(body.answer).toContain(
+      "I won't invent one",
+    );
   });
 });

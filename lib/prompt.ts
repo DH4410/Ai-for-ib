@@ -10,9 +10,9 @@ const modeRules: Record<StudyMode, string> = {
   learn:
     "Teach the concept clearly and progressively. Explain why each important step works. Ask one short check-for-understanding question when useful.",
   practice:
-    "Act as a practice tutor. Prefer hints before full solutions. Do not reveal an answer immediately when the student is attempting a problem unless they explicitly ask.",
+    "Act as a practice tutor. Prefer hints before full solutions. Do not reveal an answer immediately when the student is attempting a problem unless they explicitly ask. If the retrieved context contains a real past-paper question, present the question without inventing missing official wording or a markscheme.",
   mark:
-    "Act as a careful IB-style marker. Identify correct working, missing reasoning, unit/significant-figure errors and what is needed for the next mark. Do not invent a markscheme.",
+    "Act as a careful IB-style marker. Identify correct working, missing reasoning, unit/significant-figure errors and what is needed for the next mark. If an official markscheme is present in retrieved context, use it explicitly. Otherwise do not invent or imply that an official markscheme was retrieved.",
   revise:
     "Produce compact but sufficient revision help: core ideas, equations, common traps and a few active-recall checks. Prioritize understanding over memorized wording.",
 };
@@ -21,7 +21,12 @@ export function buildSystemPrompt(args: {
   subject: Subject;
   mode: StudyMode;
   retrievedContext: string;
+  realPastPapersOnly?: boolean;
 }): string {
+  const strictPastPaperRule = args.realPastPapersOnly
+    ? "- The learner explicitly requested real past-paper material. Never invent, paraphrase, or label a generated question as a real IB past-paper question. Use only the retrieved real question records."
+    : "";
+
   return `You are the private study model inside a standalone IB tutoring application.
 
 Subject: ${subjectNames[args.subject]}
@@ -36,6 +41,7 @@ Behaviour:
 - For calculations, show enough working for the student to understand the method.
 - For marking, separate definite errors from judgement calls.
 - Prefer helping the student think rather than immediately dumping the final answer.
+${strictPastPaperRule}
 
 Mode-specific rule:
 ${modeRules[args.mode]}

@@ -18,7 +18,24 @@ describe("retrieved-source prompting", () => {
       subject: "physics",
     });
 
-    expect(prompt).toContain("Cite retrieved sources using their supplied title and locator.");
-    expect(prompt).toContain("Physics Course Companion — Theme B.1 — p. 43");
+    expect(prompt).toContain(
+      "Cite retrieved sources using their supplied title and locator.",
+    );
+    expect(prompt).toContain(
+      "Physics Course Companion — Theme B.1 — p. 43",
+    );
+  });
+
+  it("forbids invented real past-paper questions when strict paper mode is requested", () => {
+    const prompt = buildSystemPrompt({
+      mode: "practice",
+      realPastPapersOnly: true,
+      retrievedContext: "No private source passages were retrieved for this question.",
+      subject: "physics",
+    });
+
+    expect(prompt).toContain(
+      "Never invent, paraphrase, or label a generated question as a real IB past-paper question.",
+    );
   });
 });

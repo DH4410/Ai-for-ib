@@ -8,12 +8,13 @@ import { isStudyRepositoryConfigured } from "@/lib/database/supabase-server";
 import { fuseRankings } from "@/lib/retrieval/ranking";
 import {
   SupabaseStudySourceRepository,
+  type RankedPastPaperQuestion,
   type RankedSourceChunk,
   type RetrievalRequest,
   type StudySourceRepository,
 } from "@/lib/retrieval/repository";
 import type { StudyDocumentType } from "@/lib/study-source/types";
-import type { SourceChunk, Subject } from "@/types/study";
+import type { SourceChunk, StudyMode, Subject } from "@/types/study";
 
 export type StudyRetrievalFilters = {
   documentTypes?: StudyDocumentType[];
@@ -27,6 +28,7 @@ export type StudyRetrievalFilters = {
 
 export type StudyRetrievalArgs = {
   subject: Subject;
+  mode?: StudyMode;
   query: string;
   limit?: number;
   filters?: StudyRetrievalFilters;
@@ -39,9 +41,17 @@ type StudyRetrieverDependencies = {
   embedQuery?: QueryEmbedder;
 };
 
-const DEFAULT_DOCUMENT_TYPES: StudyDocumentType[] = ["textbook", "study-guide", "syllabus"];
+const DEFAULT_DOCUMENT_TYPES: StudyDocumentType[] = [
+  "textbook",
+  "study-guide",
+  "syllabus",
+];
 
-function toSourceChunk(chunk: Awaited<ReturnType<StudySourceRepository["searchLexical"]>>[number]): SourceChunk {
+function toSourceChunk(
+  chunk: Awaited<
+    ReturnType<StudySourceRepository["searchLexical"]>
+  >[number],
+): SourceChunk {
   return {
     documentId: chunk.documentId,
     documentType: chunk.documentType,
@@ -57,9 +67,74 @@ function toSourceChunk(chunk: Awaited<ReturnType<StudySourceRepository["searchLe
   };
 }
 
-export function createStudyRetriever({ repository, embedQuery }: StudyRetrieverDependencies) {
-  return async function retrieve(args: StudyRetrievalArgs): Promise<SourceChunk[]> {
+function toPastPaperSourceChunk(
+  question: RankedPastPaperQuestion,
+  mode: StudyMode,
+): SourceChunk {
+  const includeMarkscheme =
+    mode === "mark" &&
+    question.pairingStatus === "paired" &&
+    Boolean(question.markschemeText);
+
+  return {
+    documentId: question.documentId,
+    documentType: "question-paper",
+    id: question.id,
+    locator: question.locator,
+    marks: question.marks,
+    pairingStatus: question.pairingStatus,
+    paper: question.paper,
+    questionNumber: question.questionNumber,
+    score: question.score,
+    subject: question.subject,
+    text: includeMarkscheme
+      ? `Question:\n${question.questionText}\n\nOfficial markscheme:\n${question.markschemeText}`
+      : `Question:\n${question.questionText}`,
+    title: question.title,
+    topicIds: question.topicIds,
+    year: question.year,
+  };
+}
+
+function wantsPastPaperQuestions(
+  filters: StudyRetrievalFilters | undefined,
+): boolean {
+  return Boolean(
+    filters?.realPastPapersOnly ||
+      filters?.documentTypes?.some(
+        (documentType) =>
+          documentType === "question-paper" ||
+          documentType === "markscheme",
+      ),
+  );
+}
+
+export function createStudyRetriever({
+  repository,
+  embedQuery,
+}: StudyRetrieverDependencies) {
+  return async function retrieve(
+    args: StudyRetrievalArgs,
+  ): Promise<SourceChunk[]> {
     const limit = args.limit ?? 8;
+    const mode = args.mode ?? "learn";
+
+    if (wantsPastPaperQuestions(args.filters)) {
+      const questions = await repository.searchPastPaperQuestions({
+        limit,
+        pairedOnly: mode === "mark",
+        paper: args.filters?.paper,
+        query: args.query,
+        subject: args.subject,
+        topicIds: args.filters?.topicIds,
+        years: args.filters?.years,
+      });
+
+      return questions.map((question) =>
+        toPastPaperSourceChunk(question, mode),
+      );
+    }
+
     const request: RetrievalRequest = {
       documentTypes: args.filters?.documentTypes ?? DEFAULT_DOCUMENT_TYPES,
       limit: Math.min(Math.max(limit * 4, 10), 100),
@@ -72,27 +147,27 @@ export function createStudyRetriever({ repository, embedQuery }: StudyRetrieverD
 
     if (embedQuery) {
       try {
-        vector = await repository.searchVector(request, await embedQuery(args.query));
+        vector = await repository.searchVector(
+          request,
+          await embedQuery(args.query),
+        );
       } catch {
-        // A temporarily unavailable local embedding service must not prevent
-        // a cited lexical answer when private retrieval is otherwise usable.
         vector = [];
       }
     }
 
-    return fuseRankings({ lexical, limit, subject: args.subject, vector }).map(toSourceChunk);
+    return fuseRankings({
+      lexical,
+      limit,
+      subject: args.subject,
+      vector,
+    }).map(toSourceChunk);
   };
 }
 
-/**
- * Retrieval boundary for the private IB knowledge base.
- *
- * V1 deliberately returns no licensed material. The next milestone will replace
- * this with hybrid retrieval (metadata filters + embeddings/full-text search)
- * over privately stored textbooks, syllabus documents, notes, papers and
- * markschemes.
- */
-export async function retrieveStudyContext(args: StudyRetrievalArgs): Promise<SourceChunk[]> {
+export async function retrieveStudyContext(
+  args: StudyRetrievalArgs,
+): Promise<SourceChunk[]> {
   if (!isStudyRepositoryConfigured(process.env)) {
     return [];
   }
@@ -108,7 +183,9 @@ export async function retrieveStudyContext(args: StudyRetrievalArgs): Promise<So
   return retrieve(args);
 }
 
-export function formatRetrievedContext(chunks: SourceChunk[]): string {
+export function formatRetrievedContext(
+  chunks: SourceChunk[],
+): string {
   if (chunks.length === 0) {
     return "No private source passages were retrieved for this question.";
   }
