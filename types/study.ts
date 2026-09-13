@@ -8,6 +8,12 @@ export type SourceChunk = {
   locator?: string;
   text: string;
   score?: number;
+  documentId?: string;
+  documentType?: string;
+  subject?: Subject;
+  pageStart?: number | null;
+  pageEnd?: number | null;
+  topicIds?: string[];
 };
 
 export type ChatTurn = {

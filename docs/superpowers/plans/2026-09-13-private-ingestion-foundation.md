@@ -337,7 +337,7 @@ Run: git commit -m "feat: add private study source repository"
 - Preserves retrieveStudyContext with subject, query, and limit.
 - Produces cited SourceChunk records with document type, topic IDs, page/question locator, and stable ID.
 
-- [ ] **Step 1: Write failing rank/citation tests**
+- [x] **Step 1: Write failing rank/citation tests**
 
     it("fuses results only after strict subject filtering", () => {
       const result = fuseRankings({
@@ -355,17 +355,17 @@ Run: git commit -m "feat: add private study source repository"
         .toBe("Physics Course Companion — Theme B.1 — p. 43");
     });
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: npm test -- tests/retrieval/ranking.test.ts
 
 Expected: FAIL because no ranker/citation formatter exists.
 
-- [ ] **Step 3: Implement filter-first fusion**
+- [x] **Step 3: Implement filter-first fusion**
 
 Call lexical and vector search with subject, mode-selected document type, topic, year, paper, and paired-only restrictions before fusion. Over-fetch candidates; deduplicate; reciprocal-rank-fuse; prefer matching heading/topic; cap at limit. If Supabase is absent, preserve empty-context chat. The prompt tells the model to cite only provided locators and admit unsupported claims.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run: npm test -- tests/retrieval/ranking.test.ts tests/retrieval/retrieval.test.ts tests/prompt.test.ts && npm test && npm run verify:private && npm run typecheck && npm run build
 Run: git add types/study.ts lib/retrieval.ts lib/retrieval/ranking.ts lib/prompt.ts tests/retrieval
