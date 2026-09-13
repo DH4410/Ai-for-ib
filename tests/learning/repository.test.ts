@@ -69,7 +69,7 @@ describe("learning progress repository", () => {
       parameters: Record<string, unknown>;
     }> = [];
     const repository = new SupabaseLearningProgressRepository({
-      async rpc(name, parameters) {
+      async rpc(name: string, parameters: Record<string, unknown>) {
         calls.push({ name, parameters });
 
         if (name === "get_private_learning_progress") {
