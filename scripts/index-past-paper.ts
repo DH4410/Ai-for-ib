@@ -484,6 +484,10 @@ async function main(): Promise<void> {
     sourceId: questionSource.id,
     unmatchedMarkschemeCandidateCount:
       structured.unmatchedMarkschemeCandidateIds.length,
+    visualDependentQuestionCount:
+      structured.questions.filter(
+        ({ assetReferences }) => assetReferences.length > 0,
+      ).length,
   };
   const reportRoot = resolve(
     root,

@@ -132,3 +132,10 @@ SUPABASE_SECRET_KEY=
 ```
 
 The legacy `SUPABASE_SERVICE_ROLE_KEY` remains accepted as a fallback. Real question/markscheme text is sent only to the configured private database and is never written into Git.
+
+
+## Visual-dependent questions
+
+The current structured practice UI is text-first. During paper indexing, questions whose extracted wording explicitly depends on a graph, diagram, figure, image, or a visual "shown below/above" are tagged with `visual-context-required`.
+
+Those records stay in the private database for provenance but are excluded from real-question retrieval until the corresponding visual assets can be preserved and rendered. The indexing report includes `visualDependentQuestionCount` so this loss is visible instead of silently serving incomplete questions.
