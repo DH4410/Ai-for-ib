@@ -148,16 +148,31 @@ create table if not exists private.topic_mastery (
   primary key (student_id, topic_id)
 );
 
+alter table private.topic_mastery
+  add column if not exists attempt_count integer not null default 0
+  check (attempt_count >= 0);
+
+create index if not exists learning_events_student_created_idx
+  on private.learning_events (student_id, created_at desc);
+create index if not exists topic_mastery_attempt_count_idx
+  on private.topic_mastery (student_id, mastery_estimate, next_review_at);
+
 alter table private.student_profiles enable row level security;
 alter table private.learning_events enable row level security;
 alter table private.topic_mastery enable row level security;
 
 create policy "student profiles are private to their owner" on private.student_profiles
-  for all using (auth.uid() = id) with check (auth.uid() = id);
+  for all to authenticated
+  using ((select auth.uid()) = id)
+  with check ((select auth.uid()) = id);
 create policy "learning events are private to their owner" on private.learning_events
-  for all using (auth.uid() = student_id) with check (auth.uid() = student_id);
+  for all to authenticated
+  using ((select auth.uid()) = student_id)
+  with check ((select auth.uid()) = student_id);
 create policy "topic mastery is private to its owner" on private.topic_mastery
-  for all using (auth.uid() = student_id) with check (auth.uid() = student_id);
+  for all to authenticated
+  using ((select auth.uid()) = student_id)
+  with check ((select auth.uid()) = student_id);
 
 create or replace function public.search_private_study_chunks(
   p_subject text,
@@ -636,3 +651,156 @@ revoke all on function public.search_private_past_paper_questions(
 grant execute on function public.search_private_past_paper_questions(
   text, text, integer[], text, text[], boolean, integer
 ) to service_role;
+
+
+create or replace function public.record_private_learning_attempt(
+  p_student_id uuid,
+  p_attempt jsonb,
+  p_mastery jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = private, public, auth
+as $$
+declare
+  v_subject text;
+  v_topic_id text;
+begin
+  if p_student_id is null then
+    raise exception 'student id is required';
+  end if;
+  if jsonb_typeof(p_attempt) <> 'object'
+    or jsonb_typeof(p_mastery) <> 'object' then
+    raise exception 'attempt and mastery must be JSON objects';
+  end if;
+
+  v_subject := p_attempt->>'subject';
+  v_topic_id := p_attempt->>'topic_id';
+
+  if v_topic_id is null
+    or v_topic_id <> p_mastery->>'topic_id' then
+    raise exception 'attempt and mastery topic IDs must match';
+  end if;
+
+  if not exists (
+    select 1
+    from private.topics topic
+    where topic.id = v_topic_id
+      and topic.subject = v_subject
+  ) then
+    raise exception 'attempt topic does not match the subject taxonomy';
+  end if;
+
+  insert into private.student_profiles (id)
+  values (p_student_id)
+  on conflict (id) do nothing;
+
+  insert into private.learning_events (
+    student_id,
+    past_paper_question_id,
+    subject,
+    topic_id,
+    score,
+    maximum_marks,
+    hints_used,
+    attempt_number,
+    misconception_tags,
+    confidence,
+    elapsed_seconds,
+    created_at
+  )
+  values (
+    p_student_id,
+    nullif(p_attempt->>'past_paper_question_id', ''),
+    v_subject,
+    v_topic_id,
+    (p_attempt->>'score')::numeric,
+    (p_attempt->>'maximum_marks')::numeric,
+    coalesce((p_attempt->>'hints_used')::integer, 0),
+    coalesce((p_attempt->>'attempt_number')::integer, 1),
+    array(
+      select jsonb_array_elements_text(
+        coalesce(p_attempt->'misconception_tags', '[]'::jsonb)
+      )
+    ),
+    nullif(p_attempt->>'confidence', '')::real,
+    nullif(p_attempt->>'elapsed_seconds', '')::integer,
+    coalesce(
+      nullif(p_attempt->>'occurred_at', '')::timestamptz,
+      now()
+    )
+  );
+
+  insert into private.topic_mastery (
+    student_id,
+    topic_id,
+    mastery_estimate,
+    attempt_count,
+    next_review_at,
+    updated_at
+  )
+  values (
+    p_student_id,
+    v_topic_id,
+    (p_mastery->>'mastery_estimate')::real,
+    coalesce((p_mastery->>'attempt_count')::integer, 1),
+    nullif(p_mastery->>'next_review_at', '')::timestamptz,
+    coalesce(
+      nullif(p_mastery->>'updated_at', '')::timestamptz,
+      now()
+    )
+  )
+  on conflict (student_id, topic_id) do update
+  set
+    mastery_estimate = excluded.mastery_estimate,
+    attempt_count = excluded.attempt_count,
+    next_review_at = excluded.next_review_at,
+    updated_at = excluded.updated_at;
+end;
+$$;
+
+create or replace function public.get_private_learning_progress(
+  p_student_id uuid,
+  p_subject text default null
+)
+returns table (
+  subject text,
+  topic_id text,
+  label text,
+  mastery_estimate real,
+  attempt_count integer,
+  next_review_at timestamptz,
+  updated_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = private, public
+as $$
+  select
+    topic.subject,
+    mastery.topic_id,
+    topic.label,
+    mastery.mastery_estimate,
+    mastery.attempt_count,
+    mastery.next_review_at,
+    mastery.updated_at
+  from private.topic_mastery mastery
+  join private.topics topic on topic.id = mastery.topic_id
+  where mastery.student_id = p_student_id
+    and (p_subject is null or topic.subject = p_subject)
+  order by
+    mastery.mastery_estimate asc,
+    mastery.next_review_at asc nulls first,
+    mastery.topic_id;
+$$;
+
+revoke all on function public.record_private_learning_attempt(uuid, jsonb, jsonb)
+  from public, anon, authenticated;
+revoke all on function public.get_private_learning_progress(uuid, text)
+  from public, anon, authenticated;
+grant execute on function public.record_private_learning_attempt(uuid, jsonb, jsonb)
+  to service_role;
+grant execute on function public.get_private_learning_progress(uuid, text)
+  to service_role;
