@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:private": "tsx scripts/verify-private-boundary.ts",
-    "training:validate": "tsx scripts/validate-training-dataset.ts"
+    "training:validate": "tsx scripts/validate-training-dataset.ts",
+    "training:evaluate": "tsx scripts/run-model-eval.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
@@ -28,4 +29,4 @@
     "typescript": "^5.7.0",
     "vitest": "^5.0.0"
   }
-}
+}\n

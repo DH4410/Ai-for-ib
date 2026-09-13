@@ -131,3 +131,40 @@ Only promote a checkpoint after comparing it against the unmodified base model o
 ## Why the base model is not fixed yet
 
 The repository has a stable model API boundary, so the best approach is to benchmark a few open-weight instruct models using the same evaluation set, then fine-tune the strongest one that fits the available GPU budget. This avoids building the whole tutor around a model name that may be a poor fit for Physics/Chemistry/Math.
+
+
+## Base vs fine-tuned evaluation
+
+Training loss does not tell us whether the tutor became better. Use a private evaluation JSONL and compare the unmodified base model with the candidate model through the same OpenAI-compatible API.
+
+A tiny synthetic schema example is committed as `training/eval.example.jsonl`. Real evaluation files are private and blocked from Git.
+
+Each case defines:
+
+- the conversation prompt;
+- required concept groups, where any phrase in a group can satisfy that concept;
+- optional forbidden phrases;
+- an optional word limit;
+- whether the response should ask the learner a question.
+
+The deterministic checks are intentionally limited. They are useful for comparing the same cases across two models, but final correctness and pedagogy still need human review.
+
+Set the two model endpoints:
+
+```bash
+export EVAL_BASE_URL=http://localhost:8000/v1
+export EVAL_BASE_MODEL=<base-model-name>
+
+export EVAL_CANDIDATE_URL=http://localhost:8001/v1
+export EVAL_CANDIDATE_MODEL=<fine-tuned-model-name>
+```
+
+API keys, when needed, use `EVAL_BASE_API_KEY` and `EVAL_CANDIDATE_API_KEY`.
+
+Then run:
+
+```bash
+npm run training:evaluate -- training/private-data/eval.jsonl training/outputs/model-comparison.json
+```
+
+The report is forced under `training/outputs/`, which is private/ignored. It stores both responses, latency, concept coverage, word-limit checks and guardrail results. Do not publish the report if the evaluation prompts contain private study material.

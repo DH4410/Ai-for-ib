@@ -44,7 +44,7 @@ The repository now includes:
 7. a private Supabase/pgvector schema and server-only source repository;
 8. hybrid lexical/vector retrieval with stable citations;
 9. validated source-aware chat requests and citation-only API responses;
-10. tests and CI for privacy, retrieval, ingestion and API behavior;\n11. a private training-data validator and Colab-ready QLoRA fine-tuning runner.
+10. tests and CI for privacy, retrieval, ingestion and API behavior;\n11. a private training-data validator and Colab-ready QLoRA fine-tuning runner;\n12. a base-vs-candidate evaluation harness for repeatable tutor benchmarking.
 
 The next product milestones are source ingestion with the user's authorized files, model benchmarking/evaluation, and the learning-progress layer. The initial Colab fine-tuning scaffold is in `training/README.md`.
 
