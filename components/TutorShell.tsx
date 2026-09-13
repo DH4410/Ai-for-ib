@@ -1,0 +1,234 @@
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+
+import type {
+  ChatTurn,
+  StudyMode,
+  Subject,
+  TutorResponse,
+} from "@/types/study";
+
+const subjectOptions: Array<{ id: Subject; label: string; short: string }> = [
+  { id: "physics", label: "Physics", short: "PH" },
+  { id: "chemistry", label: "Chemistry", short: "CH" },
+  { id: "mathematics", label: "Mathematics", short: "MA" },
+];
+
+const modeOptions: Array<{ id: StudyMode; label: string }> = [
+  { id: "learn", label: "Learn" },
+  { id: "practice", label: "Practice" },
+  { id: "mark", label: "Mark my work" },
+  { id: "revise", label: "Revise" },
+];
+
+type VisibleTurn = ChatTurn & { sources?: TutorResponse["sources"] };
+
+export function TutorShell() {
+  const [subject, setSubject] = useState<Subject>("physics");
+  const [mode, setMode] = useState<StudyMode>("learn");
+  const [input, setInput] = useState("");
+  const [turns, setTurns] = useState<VisibleTurn[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modelName, setModelName] = useState("not connected");
+
+  const placeholder = useMemo(() => {
+    if (mode === "mark") return "Paste your answer and the question you answered…";
+    if (mode === "practice") return "Give me practice on thermal physics…";
+    if (mode === "revise") return "Revise atomic structure with me…";
+    return "Explain a topic, equation or question…";
+  }, [mode]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+
+    const message = input.trim();
+    if (!message || loading) return;
+
+    const history: ChatTurn[] = turns.map(({ role, content }) => ({ role, content }));
+    setTurns((current) => [...current, { role: "user", content: message }]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject,
+          mode,
+          message,
+          history,
+        }),
+      });
+
+      const payload = (await response.json()) as TutorResponse | { error: string };
+
+      if (!response.ok || "error" in payload) {
+        throw new Error("error" in payload ? payload.error : "Tutor request failed.");
+      }
+
+      setModelName(payload.model);
+      setTurns((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: payload.answer,
+          sources: payload.sources,
+        },
+      ]);
+    } catch (error) {
+      setTurns((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content:
+            "I could not reach the model backend. " +
+            (error instanceof Error ? error.message : "Unknown error."),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="appShell">
+      <aside className="sidebar">
+        <div>
+          <div className="brandMark">IB</div>
+          <h1>Study AI</h1>
+          <p className="muted">Private tutor workspace</p>
+        </div>
+
+        <section className="sideSection">
+          <span className="eyebrow">Subject</span>
+          <div className="subjectList">
+            {subjectOptions.map((option) => (
+              <button
+                className={subject === option.id ? "subject active" : "subject"}
+                key={option.id}
+                onClick={() => setSubject(option.id)}
+                type="button"
+              >
+                <span>{option.short}</span>
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <div className="modelStatus">
+          <span className="statusDot" />
+          <div>
+            <strong>Model</strong>
+            <p>{modelName}</p>
+          </div>
+        </div>
+      </aside>
+
+      <section className="workspace">
+        <header className="topbar">
+          <div>
+            <span className="eyebrow">Current workspace</span>
+            <h2>{subjectOptions.find((item) => item.id === subject)?.label}</h2>
+          </div>
+
+          <div className="modes">
+            {modeOptions.map((option) => (
+              <button
+                className={mode === option.id ? "mode active" : "mode"}
+                key={option.id}
+                onClick={() => setMode(option.id)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        <div className="conversation">
+          {turns.length === 0 ? (
+            <div className="emptyState">
+              <span className="eyebrow">Standalone IB tutor</span>
+              <h3>What are you studying?</h3>
+              <p>
+                Ask for an explanation, practise a topic, paste an answer to mark,
+                or start a revision session.
+              </p>
+              <div className="suggestions">
+                <button onClick={() => setInput("Teach me this topic from the beginning.")}>
+                  Teach a topic
+                </button>
+                <button onClick={() => setInput("Give me 5 questions, easy to hard.")}>
+                  Start practice
+                </button>
+                <button
+                  onClick={() =>
+                    setInput("Make me a concise revision sheet with equations and common mistakes.")
+                  }
+                >
+                  Build revision notes
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="turnList">
+              {turns.map((turn, index) => (
+                <article className={`turn ${turn.role}`} key={index}>
+                  <span className="turnLabel">
+                    {turn.role === "user" ? "You" : "IB AI"}
+                  </span>
+                  <div className="turnText">{turn.content}</div>
+                  {turn.sources && turn.sources.length > 0 ? (
+                    <div className="sources">
+                      {turn.sources.map((source) => (
+                        <span key={source.id}>
+                          {source.title}
+                          {source.locator ? ` · ${source.locator}` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+              {loading ? (
+                <article className="turn assistant loadingTurn">
+                  <span className="turnLabel">IB AI</span>
+                  <div className="thinking">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </article>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        <form className="composer" onSubmit={submit}>
+          <textarea
+            aria-label="Ask your IB tutor"
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder={placeholder}
+            rows={3}
+            value={input}
+          />
+          <div className="composerFooter">
+            <span>Enter to send · Shift+Enter for a new line</span>
+            <button disabled={!input.trim() || loading} type="submit">
+              {loading ? "Thinking…" : "Send"}
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+  );
+}
