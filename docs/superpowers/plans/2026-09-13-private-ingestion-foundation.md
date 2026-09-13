@@ -424,7 +424,7 @@ Run: git commit -m "feat: validate source-aware chat requests"
 - Documents normal browser download, local CLI materialization, manifest, inspection, pairing, and indexing.
 - Initializes metadata only for Chemistry Pearson 2025, Physics Oxford 2023, Mathematics AA HL Higher_book.pdf, and M25 English HL Chemistry/Physics/MAA papers/markschemes.
 
-- [ ] **Step 1: Write failing metadata-only inventory test**
+- [x] **Step 1: Write failing metadata-only inventory test**
 
     it("contains approved subjects and no direct download URL", async () => {
       const inventory = await readExampleInventory();
@@ -437,13 +437,13 @@ Run: git commit -m "feat: validate source-aware chat requests"
       )).toBe(true);
     });
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: npm test -- tests/data/source-inventory.test.ts
 
 Expected: FAIL until required provider, subject, and document-type fields exist.
 
-- [ ] **Step 3: Document exact workflow**
+- [x] **Step 3: Document exact workflow**
 
 Document local-only commands:
 

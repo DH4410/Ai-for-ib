@@ -2,27 +2,58 @@
 
 ## Product boundary
 
-AI for IB is a standalone study application. The browser talks to this application's API, and the API talks to a model endpoint that we control.
+AI for IB is a standalone study application. The browser talks to this application's API, and the API talks to a model endpoint and private study repository that we control.
 
 It is intentionally **not coupled to ChatGPT**.
 
+## Request path
+
+```text
+Browser
+  -> Next.js /api/chat
+     -> request validation
+     -> retrieval filters
+     -> lexical + vector source search
+     -> reciprocal-rank fusion
+     -> citation-aware tutor prompt
+     -> self-hosted model endpoint
+  <- answer + safe citation metadata
+```
+
+Private chunk text is used server-side as model context. The browser receives only stable citation metadata such as source ID, title, locator, document type, topic IDs and page/question fields.
+
 ## Model layer
 
-The first implementation expects an OpenAI-compatible `/v1/chat/completions` endpoint because this protocol is supported by self-hosted inference servers such as vLLM.
+The implementation expects an OpenAI-compatible `/v1/chat/completions` endpoint because that protocol is supported by self-hosted inference servers such as vLLM.
 
 That is only the wire protocol. The model itself can be an open-weight model hosted on our own GPU infrastructure.
 
-Later:
+Planned model work:
 
 1. benchmark suitable base models for IB Physics/Chemistry/Math;
-2. build tutor/marking instruction data;
-3. fine-tune with LoRA/QLoRA;
+2. build owned or permitted tutor/marking instruction data;
+3. fine-tune with LoRA/QLoRA in Google Colab or another GPU environment;
 4. evaluate against a held-out IB-style benchmark;
 5. deploy the selected checkpoint behind the same model API.
 
+Textbook passages are **not** the primary fine-tuning strategy. Factual course content stays in retrieval so it can remain source-aware and updateable.
+
 ## Knowledge layer
 
-Do not fine-tune textbook passages into the model as the primary knowledge strategy.
+The implemented source pipeline is:
+
+```text
+authorized local file
+  -> private materialization + SHA-256 manifest
+  -> PDF page extraction
+  -> OCR-required page detection
+  -> semantic/page-aware chunking
+  -> IB topic classification
+  -> private Supabase persistence
+  -> lexical + vector search
+  -> filter-first rank fusion
+  -> cited model context
+```
 
 Use retrieval for:
 
@@ -30,46 +61,38 @@ Use retrieval for:
 - syllabus/specification documents;
 - student notes;
 - worked examples;
-- past-paper question metadata;
+- past-paper questions;
 - markschemes.
 
-Planned retrieval pipeline:
-
-```text
-upload
-  -> parse pages / diagrams / equations
-  -> normalize metadata
-  -> chunk
-  -> embeddings + full-text index
-  -> retrieve with subject/topic filters
-  -> rerank
-  -> model context
-```
-
-Each chunk needs source metadata so answers can display page/question references.
+Each chunk keeps source metadata, original page ranges, heading paths and stable identifiers.
 
 ## Past papers
 
-Questions and markschemes should be stored as structured records rather than only as PDFs.
+Question papers and markschemes are represented as structured records rather than treated only as whole PDFs.
 
-Suggested fields:
+The parser/pairing layer normalizes:
 
-- subject
-- syllabus version
-- topic/subtopic
-- session/year/timezone
-- paper
-- question/sub-question
-- marks
-- command term
-- question body
-- required figures/assets
-- markscheme criteria
-- source locator
+- subject;
+- syllabus version;
+- topic/subtopic;
+- session and year;
+- timezone;
+- level;
+- paper/component;
+- language;
+- question/sub-question;
+- marks where visible;
+- command terms where available;
+- question body;
+- required figures/assets;
+- markscheme linkage;
+- source locator.
+
+Pairing is conservative: a paper is `paired` only when one unique markscheme matches the full key. Missing schemes remain `question_only`; collisions remain `ambiguous` for manual review.
 
 ## Student model
 
-Store learning state separately from LLM weights:
+Learning state belongs in the database, not in LLM weights:
 
 - attempts;
 - scores;
@@ -81,8 +104,23 @@ Store learning state separately from LLM weights:
 
 This gives personalization without retraining the model after every study session.
 
+## Storage and database boundary
+
+The Supabase migration creates a non-exposed `private` schema for documents, versions, pages, chunks, topics, past-paper records and learner state.
+
+Source search is exposed only through constrained server-side RPCs executed with the service role. The browser never receives the service-role key or direct private-storage access.
+
+The vector schema currently uses 1,024-dimensional embeddings, matching the configured self-hosted embedding endpoint.
+
 ## Security / copyright
 
-The GitHub repository may remain public, but licensed books, papers, markschemes and model credentials must remain outside Git.
+The GitHub repository may remain public, but licensed books, papers, markschemes, extracted source text, page images, signed URLs, cookies, model weights and credentials must remain outside Git.
 
-Use private object storage plus authenticated database records for source material.
+The repository enforces this with:
+
+- ignored private source/index/report paths;
+- extension checks for common study binaries and model weights;
+- `npm run verify:private`;
+- CI verification before tests/typechecking/build.
+
+See `docs/INGESTION.md` and `docs/PAST_PAPERS.md` for the operating workflow.
