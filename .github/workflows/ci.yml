@@ -18,5 +18,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - run: npm run verify:private
+      - run: npm test
       - run: npm run typecheck
       - run: npm run build

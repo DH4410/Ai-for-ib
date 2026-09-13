@@ -4,11 +4,24 @@ out
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 *.log
+*.tsbuildinfo
 .DS_Store
 
 # Never commit licensed/private study sources or model weights.
 private-sources/
+private-index/
+data/source-manifest.jsonl
+data/ingestion-reports/
+.worktrees/
 models/
 *.gguf
 *.safetensors
+*.pdf
+*.ppt
+*.pptx
+*.doc
+*.docx
+*.epub
