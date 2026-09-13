@@ -1,21 +1,34 @@
 import { describe, expect, it } from "vitest";
 
-import { isStudyRepositoryConfigured } from "@/lib/database/supabase-server";
+import {
+  isStudyRepositoryConfigured,
+} from "@/lib/database/supabase-server";
 
-describe("private Supabase configuration", () => {
-  it("is unavailable without both server credentials", () => {
+describe("private Supabase server configuration", () => {
+  it("is not configured without a URL and server secret", () => {
     expect(
       isStudyRepositoryConfigured({
-        SUPABASE_SERVICE_ROLE_KEY: "",
         SUPABASE_URL: "",
+        SUPABASE_SECRET_KEY: "",
+        SUPABASE_SERVICE_ROLE_KEY: "",
       }),
     ).toBe(false);
   });
 
-  it("requires both a URL and service role before server retrieval can start", () => {
+  it("prefers the current secret-key configuration", () => {
     expect(
       isStudyRepositoryConfigured({
-        SUPABASE_SERVICE_ROLE_KEY: "service-role-only-on-server",
+        SUPABASE_SECRET_KEY: "sb_secret_example",
+        SUPABASE_URL: "https://example.supabase.co",
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps the legacy service-role key as a fallback", () => {
+    expect(
+      isStudyRepositoryConfigured({
+        SUPABASE_SERVICE_ROLE_KEY:
+          "legacy-service-role",
         SUPABASE_URL: "https://example.supabase.co",
       }),
     ).toBe(true);
