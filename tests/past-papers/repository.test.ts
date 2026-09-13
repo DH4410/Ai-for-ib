@@ -89,6 +89,7 @@ describe("past-paper index repository", () => {
       },
       questions: [
         {
+          assetReferences: [],
           commandTerms: ["calculate"],
           id: "physics-m25-hl-tz2-p2-qp-q1",
           level: "HL",

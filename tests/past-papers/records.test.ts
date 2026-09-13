@@ -87,6 +87,22 @@ describe("structured past-paper records", () => {
     });
   });
 
+  it("flags questions that depend on a missing visual asset", () => {
+    const result = buildPastPaperQuestionRecords({
+      questionDocument,
+      questionPages: [
+        {
+          pageNumber: 5,
+          text: "3. Use the graph shown below to determine the gradient. [2]",
+        },
+      ],
+    });
+
+    expect(result.questions[0]?.assetReferences).toEqual([
+      "visual-context-required",
+    ]);
+  });
+
   it("rejects a markscheme whose full metadata key does not match", () => {
     expect(() =>
       buildPastPaperQuestionRecords({

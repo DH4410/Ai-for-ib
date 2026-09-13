@@ -25,6 +25,7 @@ export type StructuredPastPaperQuestion = {
   commandTerms: string[];
   questionText: string;
   markschemeText: string | null;
+  assetReferences: string[];
   pairingStatus: "paired" | "question_only";
   topicIds: string[];
   topicConfidence: number;
@@ -63,6 +64,21 @@ const COMMAND_TERMS = [
 
 function candidateKey(candidate: QuestionCandidate): string {
   return `${candidate.questionNumber}:${candidate.subquestion ?? ""}`;
+}
+
+function assetReferences(text: string): string[] {
+  const visualPatterns = [
+    /\bdiagram\b/i,
+    /\bgraph\b/i,
+    /\bfigure\b/i,
+    /\bimage\b/i,
+    /\bshown\s+(?:below|above|in)\b/i,
+    /\brefer\s+to\s+the\s+(?:diagram|graph|figure|image)\b/i,
+  ];
+
+  return visualPatterns.some((pattern) => pattern.test(text))
+    ? ["visual-context-required"]
+    : [];
 }
 
 function commandTerms(text: string): string[] {
@@ -175,6 +191,7 @@ export function buildPastPaperQuestionRecords(args: {
     });
 
     questions.push({
+      assetReferences: assetReferences(candidate.text),
       commandTerms: commandTerms(candidate.text),
       id: candidate.id,
       level: args.questionDocument.level,

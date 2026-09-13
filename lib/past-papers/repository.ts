@@ -159,6 +159,7 @@ export class SupabasePastPaperIndexRepository {
           request.questionVersion,
         ),
         p_questions: request.questions.map((question) => ({
+          asset_references: question.assetReferences,
           command_terms: question.commandTerms,
           id: question.id,
           marks: question.marks ?? null,
