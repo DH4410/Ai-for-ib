@@ -103,6 +103,7 @@ export async function ingestLocalSource(
 
             return {
               ...chunk,
+              id: `${chunk.id}--${materialization.checksumSha256.slice(0, 12)}`,
               topicConfidence: classification.confidence,
               topicIds: classification.topicIds,
               topicClassification: {

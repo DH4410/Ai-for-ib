@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:private": "tsx scripts/verify-private-boundary.ts",
+    "study:index": "tsx scripts/index-source.ts",
     "training:validate": "tsx scripts/validate-training-dataset.ts",
     "training:evaluate": "tsx scripts/run-model-eval.ts"
   },

@@ -77,6 +77,26 @@ describe("source manifest", () => {
     });
   });
 
+  it("records safe indexing state without private source text", async () => {
+    const manifestPath = await createManifestPath();
+
+    await appendManifestEvent(manifestPath, {
+      checksumSha256: checksum,
+      chunkCount: 12,
+      embeddingCount: 12,
+      eventType: "indexed",
+      occurredAt: "2026-09-13T18:30:00.000Z",
+      sourceId: "physics-oxford-2023",
+    });
+
+    expect((await readManifestEvents(manifestPath)).at(-1)).toMatchObject({
+      checksumSha256: checksum,
+      chunkCount: 12,
+      embeddingCount: 12,
+      eventType: "indexed",
+    });
+  });
+
   it("rejects sensitive manifest fields before writing an event", async () => {
     const manifestPath = await createManifestPath();
 

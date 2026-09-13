@@ -147,3 +147,51 @@ Do not index a file with the wrong source ID or obviously broken page extraction
 The ingestion foundation handles local PDFs and prepares page-aware content for private retrieval. It does not automate provider logins/downloads, bypass access controls, or train the LLM on copyrighted textbook passages.
 
 The first practical goal is to ingest the three authorized textbooks above, then add selected private notes and past-paper material using the same boundary.
+
+
+## 6. Load an ingested source into private retrieval
+
+After local ingestion has produced `private-index/extracted/` and `private-index/chunks/`, the source can be loaded into the private Supabase schema through a service-role-only RPC.
+
+The browser never receives the service-role key. Keep these values in a private local/server environment:
+
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Embeddings are optional. For hybrid vector + lexical retrieval also configure:
+
+```env
+EMBEDDING_BASE_URL=http://localhost:8001/v1
+EMBEDDING_MODEL=BAAI/bge-m3
+EMBEDDING_API_KEY=
+```
+
+The current database vector column is 1,024 dimensions. The index command rejects vectors with a different dimension instead of silently writing incompatible data.
+
+Index the latest locally ingested version:
+
+```powershell
+npm run study:index -- --source-id physics-oxford-2023
+```
+
+Force lexical-only indexing:
+
+```powershell
+npm run study:index -- --source-id physics-oxford-2023 --no-embeddings
+```
+
+Select an exact immutable version when more than one checksum exists:
+
+```powershell
+npm run study:index -- --source-id physics-oxford-2023 --checksum <sha256>
+```
+
+The command reads ignored local artifacts, sends private chunk content only to the configured Supabase backend, and prints only safe counts/checksum metadata. A successful run appends an `indexed` event to the ignored local manifest.
+
+The private schema itself does not need to be exposed through the Data API. The migration provides `public.index_private_study_source(...)`, revokes it from public/anonymous/authenticated callers, and grants execution only to `service_role`.
+
+### Current deployment status
+
+The repository contains the database foundation and loader, but do not point it at an unrelated Supabase project. Create or select a dedicated AI-for-IB project first, then apply the foundation migration and configure its URL/service-role key privately.

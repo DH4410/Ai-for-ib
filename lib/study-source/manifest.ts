@@ -115,6 +115,16 @@ function assertManifestEvent(value: unknown): asserts value is ManifestEvent {
       assertNonNegativeInteger(value, "ocrRequiredPageCount");
       assertNonNegativeInteger(value, "pageCount");
       return;
+    case "indexed":
+      assertStringField(value, "checksumSha256");
+      assertNonNegativeInteger(value, "chunkCount");
+      assertNonNegativeInteger(value, "embeddingCount");
+
+      if (!SHA_256_PATTERN.test(value.checksumSha256)) {
+        throw new Error("manifest checksumSha256 must be a SHA-256 checksum");
+      }
+
+      return;
     default:
       throw new Error(`unsupported manifest event type: ${value.eventType}`);
   }

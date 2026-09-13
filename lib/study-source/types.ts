@@ -70,9 +70,17 @@ export type IngestedEvent = ManifestEventBase & {
   pageCount: number;
 };
 
+export type IndexedEvent = ManifestEventBase & {
+  eventType: "indexed";
+  checksumSha256: string;
+  chunkCount: number;
+  embeddingCount: number;
+};
+
 export type ManifestEvent =
   | MaterializationStartedEvent
   | MaterializedEvent
   | DuplicateEvent
   | FailedEvent
-  | IngestedEvent;
+  | IngestedEvent
+  | IndexedEvent;
