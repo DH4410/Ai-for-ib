@@ -176,7 +176,7 @@ Run: git commit -m "feat: add private source manifest"
 - Consumes SourceDocument and manifest records.
 - Produces materializeLocalSource, assessExtractedPage, buildSemanticChunks, ExtractedPage, and ContentChunk.
 
-- [ ] **Step 1: Write failing materialization and chunk tests**
+- [x] **Step 1: Write failing materialization and chunk tests**
 
     it("copies an authorized local file under its private subject directory", async () => {
       const result = await materializeLocalSource({
@@ -206,23 +206,23 @@ Run: git commit -m "feat: add private source manifest"
         .toMatchObject({ extractionMethod: "text" });
     });
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: npm test -- tests/ingestion/materialize.test.ts tests/ingestion/chunks.test.ts
 
 Expected: FAIL with missing ingestion modules.
 
-- [ ] **Step 3: Implement the minimum materializer**
+- [x] **Step 3: Implement the minimum materializer**
 
 Use lstat, exclusive copyFile, streaming SHA-256, an approved-extension MIME map, and path.relative validation so destinations cannot escape private-sources/subject. Record materialization_started before copying and failed with a safe stage/error summary. A same-checksum file produces duplicate, never overwrites the original. The CLI accepts local file paths only; it never accepts a URL.
 
-- [ ] **Step 4: Implement extraction and chunking**
+- [x] **Step 4: Implement extraction and chunking**
 
 Add pdfjs-dist to the script-only ingestion path. Extract every PDF page independently with original one-based numbers and item positions. Mark a page text only above a documented usable-text threshold; otherwise persist ocr_required. Do not run destructive OCR automatically.
 
 Build heading/subheading chunks, split long sections at paragraph boundaries, retain all traversed pages, carry preceding-paragraph overlap only, and record equation/figure placeholders. Never create arbitrary fixed-character chunks.
 
-- [ ] **Step 5: Run GREEN and commit**
+- [x] **Step 5: Run GREEN and commit**
 
 Run: npm test -- tests/ingestion/materialize.test.ts tests/ingestion/chunks.test.ts && npm test && npm run verify:private && npm run typecheck && npm run build
 Run: git add package.json package-lock.json lib/ingestion scripts/ingest-source.ts tests/ingestion
