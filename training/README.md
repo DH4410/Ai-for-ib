@@ -168,3 +168,37 @@ npm run training:evaluate -- training/private-data/eval.jsonl training/outputs/m
 ```
 
 The report is forced under `training/outputs/`, which is private/ignored. It stores both responses, latency, concept coverage, word-limit checks and guardrail results. Do not publish the report if the evaluation prompts contain private study material.
+
+
+## Benchmark the base model before fine-tuning
+
+Do not choose the training base model by reputation alone. The repo includes `training/benchmark_models.py`, which sequentially loads small candidate models in 4-bit NF4 and runs the same private IB evaluation set against each one.
+
+The current public candidate registry is `training/model-candidates.json`:
+
+- `Qwen/Qwen3-4B` — Apache-2.0;
+- `Qwen/Qwen3-8B` — Apache-2.0;
+- `microsoft/Phi-4-mini-instruct` — MIT.
+
+These are candidates, not a predetermined winner. Hardware availability and the IB-specific held-out benchmark decide which checkpoint proceeds to QLoRA.
+
+In Colab:
+
+```bash
+!python training/benchmark_models.py \
+  --eval "/content/drive/MyDrive/ai-for-ib/private/eval.jsonl" \
+  --output "training/outputs/base-model-benchmark.json"
+```
+
+For a quick plumbing run:
+
+```bash
+!python training/benchmark_models.py \
+  --eval "/content/drive/MyDrive/ai-for-ib/private/eval.jsonl" \
+  --max-cases 3 \
+  --models "Qwen/Qwen3-4B"
+```
+
+The runner unloads each model before loading the next and reports concept coverage, guardrail pass rate, average generation latency, and peak allocated CUDA memory. The combined mechanical score is only a screening metric; manually inspect correctness and pedagogy before selecting the base model.
+
+Gemma 3 4B remains a useful optional comparison, but its Hugging Face checkpoint requires accepting Google's Gemma terms and uses a multimodal model path, so it is intentionally not in this text-only default runner.

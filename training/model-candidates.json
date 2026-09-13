@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "candidates": [
+    {
+      "id": "Qwen/Qwen3-4B",
+      "label": "Qwen3 4B",
+      "license": "Apache-2.0",
+      "enabledByDefault": true,
+      "trustRemoteCode": false,
+      "notes": "Primary small-model candidate for Colab benchmarking."
+    },
+    {
+      "id": "Qwen/Qwen3-8B",
+      "label": "Qwen3 8B",
+      "license": "Apache-2.0",
+      "enabledByDefault": true,
+      "trustRemoteCode": false,
+      "notes": "Larger quality candidate; benchmark only when the available GPU can hold 4-bit weights plus generation overhead."
+    },
+    {
+      "id": "microsoft/Phi-4-mini-instruct",
+      "label": "Phi-4 mini instruct",
+      "license": "MIT",
+      "enabledByDefault": true,
+      "trustRemoteCode": true,
+      "notes": "Compact instruction-tuned comparison candidate."
+    }
+  ]
+}
