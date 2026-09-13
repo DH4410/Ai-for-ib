@@ -290,7 +290,7 @@ Run: git commit -m "feat: classify IB topics and pair papers safely"
 - Produces StudySourceRepository, InMemoryStudySourceRepository, SupabaseStudySourceRepository, and isStudyRepositoryConfigured.
 - Provides searchLexical(request) and searchVector(request), returning filtered ranked candidates.
 
-- [ ] **Step 1: Write failing configuration/repository tests**
+- [x] **Step 1: Write failing configuration/repository tests**
 
     it("is not configured without both Supabase server credentials", () => {
       expect(isStudyRepositoryConfigured({
@@ -307,13 +307,13 @@ Run: git commit -m "feat: classify IB topics and pair papers safely"
       expect(result.map(({ id }) => id)).toEqual(["physics-b1-p43"]);
     });
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: npm test -- tests/database/supabase-server.test.ts tests/retrieval/repository.test.ts
 
 Expected: FAIL with missing server/repository modules.
 
-- [ ] **Step 3: Implement the migration and repositories**
+- [x] **Step 3: Implement the migration and repositories**
 
 Install @supabase/supabase-js. Enable vector without pinning its version; create non-exposed private schema; revoke direct access from anon and authenticated. Create documents, versions, pages, chunks, topics, mappings, paper questions, markscheme links, student profiles, learning events, and topic-mastery tables.
 
@@ -321,7 +321,7 @@ Add generated tsvector plus GIN for source text and vector(1024) plus cosine HNS
 
 Use server-only imports and read Supabase URL/service role at request time. The in-memory repository supports owned test fixtures; the Supabase repository invokes the server RPCs.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run: npm test -- tests/database/supabase-server.test.ts tests/retrieval/repository.test.ts && npm test && npm run verify:private && npm run typecheck && npm run build
 Run: git add package.json package-lock.json .env.example supabase lib/database lib/retrieval/repository.ts tests/database tests/retrieval/repository.test.ts
