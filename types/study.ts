@@ -28,8 +28,10 @@ export type TutorRequest = {
   history?: ChatTurn[];
 };
 
+export type SourceCitation = Pick<SourceChunk, "id" | "title" | "locator" | "documentType" | "topicIds" | "pageStart" | "pageEnd">;
+
 export type TutorResponse = {
   answer: string;
-  sources: Array<Pick<SourceChunk, "id" | "title" | "locator">>;
+  sources: SourceCitation[];
   model: string;
 };

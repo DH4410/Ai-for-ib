@@ -382,7 +382,7 @@ Run: git commit -m "feat: retrieve cited private study sources"
 - Preserves valid existing subject/mode/message requests.
 - Returns stable citation metadata but never private chunks or source URLs.
 
-- [ ] **Step 1: Write failing API-validation tests**
+- [x] **Step 1: Write failing API-validation tests**
 
     it("rejects an unknown subject before retrieval", () => {
       expect(() => parseChatRequest({ subject: "biology", mode: "learn", message: "Help" }))
@@ -398,17 +398,17 @@ Run: git commit -m "feat: retrieve cited private study sources"
       });
     });
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: npm test -- tests/api/chat-request.test.ts tests/api/chat-route.test.ts
 
 Expected: FAIL with missing parser and absent restricted source response shape.
 
-- [ ] **Step 3: Implement parsing and route mapping**
+- [x] **Step 3: Implement parsing and route mapping**
 
 Whitelist subjects, modes, and document types. Limit topic IDs and years to ten each; accept only 2020 through 2030; bound non-empty message text. Invalid input returns HTTP 400 and useful JSON. Inject model/retrieval through a small test factory while retaining the route export. Return source id, title, locator, document type, topic IDs, and page/question data only.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run: npm test -- tests/api/chat-request.test.ts tests/api/chat-route.test.ts && npm test && npm run verify:private && npm run typecheck && npm run build
 Run: git add app/api/chat/route.ts lib/api/chat-request.ts tests/api

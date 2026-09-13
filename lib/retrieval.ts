@@ -17,7 +17,12 @@ import type { SourceChunk, Subject } from "@/types/study";
 
 export type StudyRetrievalFilters = {
   documentTypes?: StudyDocumentType[];
+  explanationLevel?: "simple" | "standard" | "full";
+  hintsFirst?: boolean;
+  paper?: string;
+  realPastPapersOnly?: boolean;
   topicIds?: string[];
+  years?: number[];
 };
 
 export type StudyRetrievalArgs = {
@@ -87,11 +92,7 @@ export function createStudyRetriever({ repository, embedQuery }: StudyRetrieverD
  * over privately stored textbooks, syllabus documents, notes, papers and
  * markschemes.
  */
-export async function retrieveStudyContext(args: {
-  subject: Subject;
-  query: string;
-  limit?: number;
-}): Promise<SourceChunk[]> {
+export async function retrieveStudyContext(args: StudyRetrievalArgs): Promise<SourceChunk[]> {
   if (!isStudyRepositoryConfigured(process.env)) {
     return [];
   }
