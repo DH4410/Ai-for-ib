@@ -19,6 +19,7 @@ type ProgressItem = {
   attemptCount: number;
   label: string;
   masteryEstimate: number;
+  misconceptionTags: string[];
   nextReviewAt: string;
   subject: Subject;
   topicId: string;
@@ -236,6 +237,9 @@ export function ProgressPanel({ subject }: { subject: Subject }) {
                     {item.attemptCount} attempt
                     {item.attemptCount === 1 ? "" : "s"}
                     {due ? " · review due" : ""}
+                    {item.misconceptionTags.length > 0
+                      ? ` · ${item.misconceptionTags.join(", ")}`
+                      : ""}
                   </span>
                 </div>
                 <b>{masteryPercent}%</b>

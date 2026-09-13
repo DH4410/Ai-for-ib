@@ -1,31 +1,63 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   getBrowserSupabaseClient,
   isBrowserSupabaseConfigured,
 } from "@/lib/database/supabase-browser";
+import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
 import type {
   SourceCitation,
   Subject,
 } from "@/types/study";
 
+const MISTAKE_OPTIONS = [
+  { id: "concept", label: "Concept" },
+  { id: "formula", label: "Formula" },
+  { id: "units", label: "Units" },
+  { id: "algebra", label: "Algebra" },
+  {
+    id: "significant-figures",
+    label: "Sig. figures",
+  },
+  { id: "method", label: "Method" },
+] as const;
+
 export function RecordResult({
   source,
   subject,
 }: {
-  source: SourceCitation;
+  source?: SourceCitation;
   subject: Subject;
 }) {
-  const topicId = source.topicIds?.[0];
+  const topics = useMemo(
+    () =>
+      IBDP_TOPICS.filter(
+        (topic) => topic.subject === subject,
+      ),
+    [subject],
+  );
+  const defaultTopicId =
+    source?.topicIds?.find((topicId) =>
+      topics.some((topic) => topic.id === topicId),
+    ) ?? "";
   const [expanded, setExpanded] = useState(false);
+  const [topicId, setTopicId] =
+    useState(defaultTopicId);
   const [score, setScore] = useState("");
   const [maximumMarks, setMaximumMarks] = useState(
-    source.marks?.toString() ?? "",
+    source?.marks?.toString() ?? "",
   );
   const [hintsUsed, setHintsUsed] = useState("0");
   const [confidence, setConfidence] = useState("");
+  const [mistakes, setMistakes] = useState<string[]>(
+    [],
+  );
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const configured = isBrowserSupabaseConfigured();
@@ -34,12 +66,25 @@ export function RecordResult({
     [],
   );
 
-  if (!topicId) {
-    return null;
+  const selectedTopic = topics.find(
+    (topic) => topic.id === topicId,
+  );
+
+  function toggleMistake(id: string) {
+    setMistakes((current) =>
+      current.includes(id)
+        ? current.filter((value) => value !== id)
+        : [...current, id],
+    );
   }
 
   async function saveResult(event: FormEvent) {
     event.preventDefault();
+
+    if (!topicId) {
+      setStatus("Choose the topic this attempt tested.");
+      return;
+    }
 
     if (!configured || !client) {
       setStatus("Progress sync is not configured yet.");
@@ -71,8 +116,9 @@ export function RecordResult({
             : undefined,
           hintsUsed: Number(hintsUsed),
           maximumMarks: Number(maximumMarks),
+          misconceptionTags: mistakes,
           pastPaperQuestionId:
-            source.documentType === "question-paper"
+            source?.documentType === "question-paper"
               ? source.id
               : undefined,
           score: Number(score),
@@ -122,6 +168,24 @@ export function RecordResult({
 
   return (
     <form className="recordResult" onSubmit={saveResult}>
+      <label className="recordTopic">
+        <span>Topic</span>
+        <select
+          onChange={(event) =>
+            setTopicId(event.target.value)
+          }
+          required
+          value={topicId}
+        >
+          <option value="">Choose topic…</option>
+          {topics.map((topic) => (
+            <option key={topic.id} value={topic.id}>
+              {topic.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <div className="recordResultFields">
         <label>
           <span>Score</span>
@@ -176,8 +240,36 @@ export function RecordResult({
           </select>
         </label>
       </div>
+
+      <fieldset className="mistakeTags">
+        <legend>What went wrong?</legend>
+        <div>
+          {MISTAKE_OPTIONS.map((option) => (
+            <button
+              aria-pressed={mistakes.includes(option.id)}
+              className={
+                mistakes.includes(option.id)
+                  ? "mistakeTag active"
+                  : "mistakeTag"
+              }
+              key={option.id}
+              onClick={() =>
+                toggleMistake(option.id)
+              }
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="recordResultFooter">
-        <span title={topicId}>Topic tracked automatically</span>
+        <span>
+          {selectedTopic
+            ? `Tracking ${selectedTopic.label}`
+            : "Choose a topic to track"}
+        </span>
         <div>
           <button
             className="recordCancel"
@@ -186,7 +278,10 @@ export function RecordResult({
           >
             Cancel
           </button>
-          <button disabled={saving} type="submit">
+          <button
+            disabled={saving || !topicId}
+            type="submit"
+          >
             {saving ? "Saving…" : "Save"}
           </button>
         </div>

@@ -903,3 +903,46 @@ button {
     display: none;
   }
 }
+
+
+.recordTopic {
+  margin-bottom: 9px;
+}
+
+.recordTopic select {
+  width: 100%;
+  padding: 7px 8px;
+}
+
+.mistakeTags {
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.mistakeTags legend {
+  margin-bottom: 5px;
+  color: #718095;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mistakeTags > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.recordResult .mistakeTag {
+  border-color: #243241;
+  background: transparent;
+  color: #748599;
+}
+
+.recordResult .mistakeTag.active {
+  border-color: #45617e;
+  background: #172535;
+  color: #c4d8eb;
+}

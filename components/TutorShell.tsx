@@ -464,10 +464,9 @@ export function TutorShell() {
                   ) : null}
                   {turn.role === "assistant" &&
                   turn.mode === "mark" &&
-                  turn.subject &&
-                  progressSource(turn) ? (
+                  turn.subject ? (
                     <RecordResult
-                      source={progressSource(turn)!}
+                      source={progressSource(turn)}
                       subject={turn.subject}
                     />
                   ) : null}
