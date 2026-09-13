@@ -95,6 +95,9 @@ export function createChatPostHandler(
       }
 
       const system = buildSystemPrompt({
+        explanationLevel:
+          parsedRequest.filters?.explanationLevel,
+        hintsFirst: parsedRequest.filters?.hintsFirst,
         learnerContext,
         mode: parsedRequest.mode,
         realPastPapersOnly:

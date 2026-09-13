@@ -81,6 +81,9 @@ export function TutorShell() {
   const [realPastPapers, setRealPastPapers] = useState(false);
   const [paperFilter, setPaperFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
+  const [explanationLevel, setExplanationLevel] =
+    useState<"simple" | "standard" | "full">("standard");
+  const [hintsFirst, setHintsFirst] = useState(true);
 
   const placeholder = useMemo(() => {
     if (mode === "mark") {
@@ -109,17 +112,24 @@ export function TutorShell() {
       role,
       content,
     }));
-    const filters =
-      mode === "practice" && realPastPapers
+    const filters = {
+      explanationLevel,
+      ...(mode === "practice"
         ? {
-            documentTypes: ["question-paper"],
-            paper: paperFilter || undefined,
-            realPastPapersOnly: true,
-            years: yearFilter
-              ? [Number(yearFilter)]
-              : undefined,
+            hintsFirst,
+            ...(realPastPapers
+              ? {
+                  documentTypes: ["question-paper"],
+                  paper: paperFilter || undefined,
+                  realPastPapersOnly: true,
+                  years: yearFilter
+                    ? [Number(yearFilter)]
+                    : undefined,
+                }
+              : {}),
           }
-        : undefined;
+        : {}),
+    };
 
     setTurns((current) => [
       ...current,
@@ -267,6 +277,44 @@ export function TutorShell() {
             ))}
           </div>
         </header>
+
+        <div className="learningToolbar">
+          <div className="explanationControl">
+            <span>Explanation</span>
+            {(["simple", "standard", "full"] as const).map(
+              (level) => (
+                <button
+                  className={
+                    explanationLevel === level
+                      ? "learningChoice active"
+                      : "learningChoice"
+                  }
+                  key={level}
+                  onClick={() => setExplanationLevel(level)}
+                  type="button"
+                >
+                  {level[0].toUpperCase() + level.slice(1)}
+                </button>
+              ),
+            )}
+          </div>
+          {mode === "practice" ? (
+            <button
+              aria-pressed={hintsFirst}
+              className={
+                hintsFirst
+                  ? "hintsToggle active"
+                  : "hintsToggle"
+              }
+              onClick={() =>
+                setHintsFirst((current) => !current)
+              }
+              type="button"
+            >
+              Hints first {hintsFirst ? "on" : "off"}
+            </button>
+          ) : null}
+        </div>
 
         {mode === "practice" ? (
           <div className="practiceToolbar">

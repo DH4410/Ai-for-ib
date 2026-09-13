@@ -59,4 +59,19 @@ describe("retrieved-source prompting", () => {
       "Do not repeatedly announce mastery percentages",
     );
   });
+
+  it("honours explanation depth and hints-first preferences", () => {
+    const prompt = buildSystemPrompt({
+      explanationLevel: "simple",
+      hintsFirst: true,
+      mode: "practice",
+      retrievedContext: "Owned fixture.",
+      subject: "physics",
+    });
+
+    expect(prompt).toContain("Explanation level: simple");
+    expect(prompt).toContain("Use short sentences, small conceptual steps");
+    expect(prompt).toContain("Hints-first is enabled");
+    expect(prompt).toContain("one useful next hint or question at a time");
+  });
 });

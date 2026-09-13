@@ -845,3 +845,61 @@ button {
     display: none;
   }
 }
+
+
+.learningToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 7px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 1.2%);
+}
+
+.explanationControl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.explanationControl > span {
+  margin-right: 5px;
+  color: #68788b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.learningChoice,
+.hintsToggle {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #77879a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  padding: 5px 7px;
+}
+
+.learningChoice:hover,
+.learningChoice.active,
+.hintsToggle:hover,
+.hintsToggle.active {
+  border-color: #29394a;
+  background: #141d27;
+  color: #c4d4e4;
+}
+
+@media (max-width: 760px) {
+  .learningToolbar {
+    padding-inline: 16px;
+  }
+
+  .explanationControl > span {
+    display: none;
+  }
+}
