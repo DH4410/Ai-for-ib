@@ -12,7 +12,7 @@ describe("past-paper index repository", () => {
 
     const repository =
       new SupabasePastPaperIndexRepository({
-        async rpc(name, parameters) {
+        async rpc(name: string, parameters: Record<string, unknown>) {
           called = { name, parameters };
           return {
             data: {
