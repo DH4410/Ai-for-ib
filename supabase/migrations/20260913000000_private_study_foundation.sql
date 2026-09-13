@@ -101,6 +101,15 @@ create table if not exists private.past_paper_questions (
   pairing_status text not null check (pairing_status in ('paired', 'question_only', 'ambiguous'))
 );
 
+alter table private.past_paper_questions
+  add column if not exists search_vector tsvector
+  generated always as (to_tsvector('english', question_text)) stored;
+
+create index if not exists past_paper_questions_search_vector_idx
+  on private.past_paper_questions using gin (search_vector);
+create index if not exists past_paper_questions_filter_idx
+  on private.past_paper_questions (subject, year, paper, pairing_status);
+
 create table if not exists private.past_paper_question_topics (
   past_paper_question_id text not null references private.past_paper_questions(id) on delete cascade,
   topic_id text not null references private.topics(id) on delete restrict,
@@ -523,3 +532,107 @@ revoke all on function public.index_private_study_source(jsonb, jsonb, jsonb, js
   from public, anon, authenticated;
 grant execute on function public.index_private_study_source(jsonb, jsonb, jsonb, jsonb)
   to service_role;
+
+
+create or replace function public.search_private_past_paper_questions(
+  p_subject text,
+  p_query text,
+  p_years integer[] default '{}',
+  p_paper text default null,
+  p_topic_ids text[] default '{}',
+  p_paired_only boolean default false,
+  p_limit integer default 20
+)
+returns table (
+  id text,
+  document_id uuid,
+  subject text,
+  title text,
+  locator text,
+  question_text text,
+  markscheme_text text,
+  topic_ids text[],
+  year integer,
+  paper text,
+  question_number text,
+  marks integer,
+  pairing_status text,
+  score real
+)
+language sql
+stable
+security definer
+set search_path = private, public, extensions
+as $$
+  select
+    question.id,
+    question.source_question_document_id,
+    question.subject,
+    question_document.title,
+    concat_ws(
+      ' · ',
+      initcap(question.session) || ' ' || question.year::text,
+      question.timezone,
+      question.level,
+      upper(question.paper),
+      'Q' || question.question_number || coalesce(question.subquestion, '')
+    ) as locator,
+    question.question_text,
+    question.markscheme_text,
+    coalesce(
+      array_agg(distinct mapping.topic_id)
+        filter (where mapping.topic_id is not null),
+      '{}'
+    ) as topic_ids,
+    question.year,
+    question.paper,
+    question.question_number,
+    question.marks,
+    question.pairing_status,
+    ts_rank(
+      question.search_vector,
+      plainto_tsquery('english', p_query)
+    )::real as score
+  from private.past_paper_questions question
+  join private.documents question_document
+    on question_document.id = question.source_question_document_id
+  left join private.past_paper_question_topics mapping
+    on mapping.past_paper_question_id = question.id
+  where question.subject = p_subject
+    and (
+      cardinality(p_years) = 0
+      or question.year = any(p_years)
+    )
+    and (
+      p_paper is null
+      or lower(question.paper) = lower(p_paper)
+    )
+    and (
+      not p_paired_only
+      or question.pairing_status = 'paired'
+    )
+    and (
+      cardinality(p_topic_ids) = 0
+      or not exists (
+        select 1
+        from unnest(p_topic_ids) requested(topic_id)
+        where not exists (
+          select 1
+          from private.past_paper_question_topics required_topic
+          where required_topic.past_paper_question_id = question.id
+            and required_topic.topic_id = requested.topic_id
+            and required_topic.confidence >= 0.8
+        )
+      )
+    )
+  group by question.id, question_document.title
+  order by score desc, question.year desc, question.id
+  limit least(greatest(p_limit, 1), 100);
+$$;
+
+revoke all on function public.search_private_past_paper_questions(
+  text, text, integer[], text, text[], boolean, integer
+) from public, anon, authenticated;
+grant execute on function public.search_private_past_paper_questions(
+  text, text, integer[], text, text[], boolean, integer
+) to service_role;
