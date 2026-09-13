@@ -946,3 +946,78 @@ button {
   background: #172535;
   color: #c4d8eb;
 }
+
+
+.sourceLibraryPanel {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.sourceLibraryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sourceLibraryHeader b {
+  color: #6e8093;
+  font-size: 9px;
+}
+
+.sourceLibraryHint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.sourceLibraryList {
+  display: grid;
+  gap: 5px;
+}
+
+.sourceLibraryItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid #1d2835;
+  border-radius: 8px;
+  background: #0e141c;
+}
+
+.sourceLibraryItem > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.sourceLibraryItem strong {
+  overflow: hidden;
+  color: #aebdcd;
+  font-size: 9px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceLibraryItem span {
+  color: #667689;
+  font-size: 8px;
+}
+
+.sourceLibraryItem > b {
+  flex: 0 0 auto;
+  color: #71879f;
+  font-size: 8px;
+}
+
+@media (max-width: 760px) {
+  .sourceLibraryPanel {
+    display: none;
+  }
+}

@@ -5,6 +5,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { CapabilityStatus } from "@/components/CapabilityStatus";
 import { ProgressPanel } from "@/components/ProgressPanel";
 import { RecordResult } from "@/components/RecordResult";
+import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
 import type {
   ChatTurn,
@@ -236,6 +237,7 @@ export function TutorShell() {
         </section>
 
         <ProgressPanel subject={subject} />
+        <SourceLibraryPanel subject={subject} />
         <CapabilityStatus />
 
         <div className="modelStatus">

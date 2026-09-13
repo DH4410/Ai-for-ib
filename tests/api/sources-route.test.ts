@@ -54,15 +54,14 @@ describe("source catalog API", () => {
 
     expect(response.status).toBe(200);
     expect(body.sources).toHaveLength(2);
-    expect(JSON.stringify(body)).not.toContain(
-      "source_reference",
-    );
-    expect(JSON.stringify(body)).not.toContain(
-      "storage_path",
-    );
-    expect(JSON.stringify(body)).not.toContain(
-      "text",
-    );
+    for (const source of body.sources) {
+      expect(source).not.toHaveProperty("sourceReference");
+      expect(source).not.toHaveProperty("source_reference");
+      expect(source).not.toHaveProperty("storagePath");
+      expect(source).not.toHaveProperty("storage_path");
+      expect(source).not.toHaveProperty("text");
+      expect(source).not.toHaveProperty("content");
+    }
   });
 
   it("does not query source metadata before authentication succeeds", async () => {

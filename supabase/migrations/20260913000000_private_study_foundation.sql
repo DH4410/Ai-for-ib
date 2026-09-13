@@ -1244,3 +1244,59 @@ revoke all on function public.index_private_past_paper(
 grant execute on function public.index_private_past_paper(
   jsonb, jsonb, jsonb, jsonb, jsonb
 ) to service_role;
+
+
+create or replace function public.list_private_study_sources(
+  p_subject text default null
+)
+returns table (
+  source_id text,
+  subject text,
+  document_type text,
+  title text,
+  version_count integer,
+  latest_acquired_at timestamptz,
+  chunk_count integer,
+  question_count integer
+)
+language sql
+stable
+security definer
+set search_path = private, public
+as $$
+  select
+    document.source_id,
+    document.subject,
+    document.document_type,
+    document.title,
+    count(distinct version.id)::integer as version_count,
+    max(version.acquired_at) as latest_acquired_at,
+    (
+      select count(*)::integer
+      from private.content_chunks chunk
+      join private.document_versions chunk_version
+        on chunk_version.id = chunk.document_version_id
+      where chunk_version.document_id = document.id
+    ) as chunk_count,
+    (
+      select count(*)::integer
+      from private.past_paper_questions question
+      where question.source_question_document_id = document.id
+    ) as question_count
+  from private.documents document
+  left join private.document_versions version
+    on version.document_id = document.id
+  where p_subject is null
+    or document.subject = p_subject
+  group by document.id
+  order by
+    document.subject,
+    document.document_type,
+    document.title,
+    document.source_id;
+$$;
+
+revoke all on function public.list_private_study_sources(text)
+  from public, anon, authenticated;
+grant execute on function public.list_private_study_sources(text)
+  to service_role;
