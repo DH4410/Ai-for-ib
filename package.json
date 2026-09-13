@@ -12,7 +12,8 @@
     "verify:private": "tsx scripts/verify-private-boundary.ts",
     "study:index": "tsx scripts/index-source.ts",
     "training:validate": "tsx scripts/validate-training-dataset.ts",
-    "training:evaluate": "tsx scripts/run-model-eval.ts"
+    "training:evaluate": "tsx scripts/run-model-eval.ts",
+    "paper:index": "tsx scripts/index-past-paper.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

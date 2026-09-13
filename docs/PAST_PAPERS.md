@@ -88,3 +88,47 @@ Do not commit paper/markscheme PDFs or extracted question/markscheme text to thi
 Do not store direct download links, signed URLs, cookies, tokens or authentication details in the source inventory or manifest.
 
 The repository may contain metadata, parsing logic and tiny owned test fixtures. Real question text belongs in private storage/database only.
+
+
+## One-command private indexing
+
+The repository now includes a conservative local-to-private-database loader. It does **not** guess metadata from filenames. Supply the normalized paper identity explicitly so a PDF cannot silently land under the wrong year/timezone/component.
+
+Example for an authorized local Physics May 2025 HL TZ2 Paper 2 pair:
+
+```powershell
+npm run paper:index -- `
+  --question "C:\Users\dimah\Downloads\physics_m25_hl_tz2_p2.pdf" `
+  --markscheme "C:\Users\dimah\Downloads\physics_m25_hl_tz2_p2_ms.pdf" `
+  --subject physics `
+  --year 2025 `
+  --session may `
+  --timezone TZ2 `
+  --level HL `
+  --paper p2 `
+  --language English `
+  --provider ibdocs
+```
+
+For a question paper whose authorized markscheme is not available yet, omit `--markscheme`. Its extracted records remain `question_only`, so they can be used for real-question practice but not represented as officially markable.
+
+The command:
+
+1. copies each authorized local PDF to immutable ignored `private-sources/` storage;
+2. records SHA-256 provenance in the ignored manifest;
+3. extracts only pages with usable selectable text and reports pages that still require OCR;
+4. segments question/subquestion candidates;
+5. matches a markscheme only by the explicit full paper identity and question locator;
+6. skips ambiguous candidate matches rather than guessing;
+7. classifies question topics conservatively;
+8. atomically replaces the structured records for that paper through the server-only `index_private_past_paper` RPC;
+9. writes a safe count-only report under ignored `data/ingestion-reports/past-papers/`.
+
+Required server configuration:
+
+```env
+SUPABASE_URL=
+SUPABASE_SECRET_KEY=
+```
+
+The legacy `SUPABASE_SERVICE_ROLE_KEY` remains accepted as a fallback. Real question/markscheme text is sent only to the configured private database and is never written into Git.
