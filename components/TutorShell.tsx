@@ -9,7 +9,11 @@ import type {
   TutorResponse,
 } from "@/types/study";
 
-const subjectOptions: Array<{ id: Subject; label: string; short: string }> = [
+const subjectOptions: Array<{
+  id: Subject;
+  label: string;
+  short: string;
+}> = [
   { id: "physics", label: "Physics", short: "PH" },
   { id: "chemistry", label: "Chemistry", short: "CH" },
   { id: "mathematics", label: "Mathematics", short: "MA" },
@@ -22,7 +26,35 @@ const modeOptions: Array<{ id: StudyMode; label: string }> = [
   { id: "revise", label: "Revise" },
 ];
 
-type VisibleTurn = ChatTurn & { sources?: TutorResponse["sources"] };
+const paperOptionsBySubject: Record<
+  Subject,
+  Array<{ value: string; label: string }>
+> = {
+  physics: [
+    { value: "p1a", label: "Paper 1A" },
+    { value: "p1b", label: "Paper 1B" },
+    { value: "p2", label: "Paper 2" },
+  ],
+  chemistry: [
+    { value: "p1a", label: "Paper 1A" },
+    { value: "p1b", label: "Paper 1B" },
+    { value: "p2", label: "Paper 2" },
+  ],
+  mathematics: [
+    { value: "p1", label: "Paper 1" },
+    { value: "p2", label: "Paper 2" },
+    { value: "p3", label: "Paper 3" },
+  ],
+};
+
+const paperYears = Array.from(
+  { length: 7 },
+  (_, index) => 2026 - index,
+);
+
+type VisibleTurn = ChatTurn & {
+  sources?: TutorResponse["sources"];
+};
 
 export function TutorShell() {
   const [subject, setSubject] = useState<Subject>("physics");
@@ -31,22 +63,53 @@ export function TutorShell() {
   const [turns, setTurns] = useState<VisibleTurn[]>([]);
   const [loading, setLoading] = useState(false);
   const [modelName, setModelName] = useState("not connected");
+  const [realPastPapers, setRealPastPapers] = useState(false);
+  const [paperFilter, setPaperFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
 
   const placeholder = useMemo(() => {
-    if (mode === "mark") return "Paste your answer and the question you answered…";
-    if (mode === "practice") return "Give me practice on thermal physics…";
-    if (mode === "revise") return "Revise atomic structure with me…";
+    if (mode === "mark") {
+      return "Paste your answer and the question you answered…";
+    }
+    if (mode === "practice") {
+      return realPastPapers
+        ? "Ask for a real past-paper question on a topic…"
+        : "Give me practice on thermal physics…";
+    }
+    if (mode === "revise") {
+      return "Revise atomic structure with me…";
+    }
     return "Explain a topic, equation or question…";
-  }, [mode]);
+  }, [mode, realPastPapers]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
 
     const message = input.trim();
-    if (!message || loading) return;
+    if (!message || loading) {
+      return;
+    }
 
-    const history: ChatTurn[] = turns.map(({ role, content }) => ({ role, content }));
-    setTurns((current) => [...current, { role: "user", content: message }]);
+    const history: ChatTurn[] = turns.map(({ role, content }) => ({
+      role,
+      content,
+    }));
+    const filters =
+      mode === "practice" && realPastPapers
+        ? {
+            documentTypes: ["question-paper"],
+            paper: paperFilter || undefined,
+            realPastPapersOnly: true,
+            years: yearFilter
+              ? [Number(yearFilter)]
+              : undefined,
+          }
+        : undefined;
+
+    setTurns((current) => [
+      ...current,
+      { role: "user", content: message },
+    ]);
     setInput("");
     setLoading(true);
 
@@ -59,13 +122,20 @@ export function TutorShell() {
           mode,
           message,
           history,
+          filters,
         }),
       });
 
-      const payload = (await response.json()) as TutorResponse | { error: string };
+      const payload = (await response.json()) as
+        | TutorResponse
+        | { error: string };
 
       if (!response.ok || "error" in payload) {
-        throw new Error("error" in payload ? payload.error : "Tutor request failed.");
+        throw new Error(
+          "error" in payload
+            ? payload.error
+            : "Tutor request failed.",
+        );
       }
 
       setModelName(payload.model);
@@ -84,7 +154,9 @@ export function TutorShell() {
           role: "assistant",
           content:
             "I could not reach the model backend. " +
-            (error instanceof Error ? error.message : "Unknown error."),
+            (error instanceof Error
+              ? error.message
+              : "Unknown error."),
         },
       ]);
     } finally {
@@ -106,9 +178,16 @@ export function TutorShell() {
           <div className="subjectList">
             {subjectOptions.map((option) => (
               <button
-                className={subject === option.id ? "subject active" : "subject"}
+                className={
+                  subject === option.id
+                    ? "subject active"
+                    : "subject"
+                }
                 key={option.id}
-                onClick={() => setSubject(option.id)}
+                onClick={() => {
+                  setSubject(option.id);
+                  setPaperFilter("");
+                }}
                 type="button"
               >
                 <span>{option.short}</span>
@@ -131,13 +210,23 @@ export function TutorShell() {
         <header className="topbar">
           <div>
             <span className="eyebrow">Current workspace</span>
-            <h2>{subjectOptions.find((item) => item.id === subject)?.label}</h2>
+            <h2>
+              {
+                subjectOptions.find(
+                  (item) => item.id === subject,
+                )?.label
+              }
+            </h2>
           </div>
 
           <div className="modes">
             {modeOptions.map((option) => (
               <button
-                className={mode === option.id ? "mode active" : "mode"}
+                className={
+                  mode === option.id
+                    ? "mode active"
+                    : "mode"
+                }
                 key={option.id}
                 onClick={() => setMode(option.id)}
                 type="button"
@@ -148,25 +237,114 @@ export function TutorShell() {
           </div>
         </header>
 
+        {mode === "practice" ? (
+          <div className="practiceToolbar">
+            <button
+              aria-pressed={realPastPapers}
+              className={
+                realPastPapers
+                  ? "paperToggle active"
+                  : "paperToggle"
+              }
+              onClick={() =>
+                setRealPastPapers((current) => !current)
+              }
+              type="button"
+            >
+              <span className="paperToggleDot" />
+              Real past papers
+            </button>
+
+            {realPastPapers ? (
+              <div className="paperFilters">
+                <label>
+                  <span>Paper</span>
+                  <select
+                    aria-label="Past-paper component"
+                    onChange={(event) =>
+                      setPaperFilter(event.target.value)
+                    }
+                    value={paperFilter}
+                  >
+                    <option value="">Any paper</option>
+                    {paperOptionsBySubject[subject].map(
+                      (option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Year</span>
+                  <select
+                    aria-label="Past-paper year"
+                    onChange={(event) =>
+                      setYearFilter(event.target.value)
+                    }
+                    value={yearFilter}
+                  >
+                    <option value="">Any year</option>
+                    {paperYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <span className="verifiedSourceNote">
+                  Indexed real questions only
+                </span>
+              </div>
+            ) : (
+              <span className="generatedPracticeNote">
+                Generated practice is allowed
+              </span>
+            )}
+          </div>
+        ) : null}
+
         <div className="conversation">
           {turns.length === 0 ? (
             <div className="emptyState">
-              <span className="eyebrow">Standalone IB tutor</span>
+              <span className="eyebrow">
+                Standalone IB tutor
+              </span>
               <h3>What are you studying?</h3>
               <p>
-                Ask for an explanation, practise a topic, paste an answer to mark,
-                or start a revision session.
+                Ask for an explanation, practise a topic, paste an
+                answer to mark, or start a revision session.
               </p>
               <div className="suggestions">
-                <button onClick={() => setInput("Teach me this topic from the beginning.")}>
+                <button
+                  onClick={() =>
+                    setInput(
+                      "Teach me this topic from the beginning.",
+                    )
+                  }
+                >
                   Teach a topic
                 </button>
-                <button onClick={() => setInput("Give me 5 questions, easy to hard.")}>
+                <button
+                  onClick={() =>
+                    setInput(
+                      "Give me 5 questions, easy to hard.",
+                    )
+                  }
+                >
                   Start practice
                 </button>
                 <button
                   onClick={() =>
-                    setInput("Make me a concise revision sheet with equations and common mistakes.")
+                    setInput(
+                      "Make me a concise revision sheet with equations and common mistakes.",
+                    )
                   }
                 >
                   Build revision notes
@@ -176,17 +354,31 @@ export function TutorShell() {
           ) : (
             <div className="turnList">
               {turns.map((turn, index) => (
-                <article className={`turn ${turn.role}`} key={index}>
+                <article
+                  className={`turn ${turn.role}`}
+                  key={index}
+                >
                   <span className="turnLabel">
-                    {turn.role === "user" ? "You" : "IB AI"}
+                    {turn.role === "user"
+                      ? "You"
+                      : "IB AI"}
                   </span>
-                  <div className="turnText">{turn.content}</div>
-                  {turn.sources && turn.sources.length > 0 ? (
+                  <div className="turnText">
+                    {turn.content}
+                  </div>
+                  {turn.sources &&
+                  turn.sources.length > 0 ? (
                     <div className="sources">
                       {turn.sources.map((source) => (
                         <span key={source.id}>
                           {source.title}
-                          {source.locator ? ` · ${source.locator}` : ""}
+                          {source.locator
+                            ? ` · ${source.locator}`
+                            : ""}
+                          {source.marks !== undefined &&
+                          source.marks !== null
+                            ? ` · ${source.marks} marks`
+                            : ""}
                         </span>
                       ))}
                     </div>
@@ -210,9 +402,14 @@ export function TutorShell() {
         <form className="composer" onSubmit={submit}>
           <textarea
             aria-label="Ask your IB tutor"
-            onChange={(event) => setInput(event.target.value)}
+            onChange={(event) =>
+              setInput(event.target.value)
+            }
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey
+              ) {
                 event.preventDefault();
                 event.currentTarget.form?.requestSubmit();
               }
@@ -222,8 +419,13 @@ export function TutorShell() {
             value={input}
           />
           <div className="composerFooter">
-            <span>Enter to send · Shift+Enter for a new line</span>
-            <button disabled={!input.trim() || loading} type="submit">
+            <span>
+              Enter to send · Shift+Enter for a new line
+            </span>
+            <button
+              disabled={!input.trim() || loading}
+              type="submit"
+            >
               {loading ? "Thinking…" : "Send"}
             </button>
           </div>
