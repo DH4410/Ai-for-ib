@@ -750,7 +750,7 @@ language sql
 stable
 security definer
 set search_path = pg_catalog, private
-as $
+as $$
   select
     question.id,
     question.source_question_document_id,
@@ -788,7 +788,7 @@ as $
     and cardinality(question.asset_references) = 0
   group by question.id, question_document.title
   limit 1;
-$;
+$$;
 
 revoke all on function public.get_private_past_paper_question(text)
   from public, anon, authenticated;
