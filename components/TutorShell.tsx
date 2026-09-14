@@ -10,6 +10,7 @@ import {
 import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
+import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
 import type {
   ChatTurn,
   SourceCitation,
@@ -88,11 +89,13 @@ export function TutorShell() {
   const [explanationLevel, setExplanationLevel] =
     useState<"simple" | "standard" | "full">("standard");
   const [hintsFirst, setHintsFirst] = useState(true);
+  const [focusedTopicId, setFocusedTopicId] = useState("");
   const [selectedMarkSource, setSelectedMarkSource] =
     useState<SourceCitation | null>(null);
 
   function prepareRevision(target: ProgressStudyTarget) {
     setSelectedMarkSource(null);
+    setFocusedTopicId(target.topicId);
     setMode("revise");
     const mistakeFocus =
       target.misconceptionTags.length > 0
@@ -102,6 +105,18 @@ export function TutorShell() {
       `Revise ${target.label} with me. Start with a short active-recall check, then explain the parts I get wrong and finish with a few IB-style questions.${mistakeFocus}`,
     );
   }
+
+  const subjectTopics = useMemo(
+    () =>
+      IBDP_TOPICS.filter(
+        (topic) => topic.subject === subject,
+      ),
+    [subject],
+  );
+
+  const focusedTopic = subjectTopics.find(
+    (topic) => topic.id === focusedTopicId,
+  );
 
   const placeholder = useMemo(() => {
     if (mode === "mark") {
@@ -134,6 +149,9 @@ export function TutorShell() {
     }));
     const filters = {
       explanationLevel,
+      ...(focusedTopicId
+        ? { topicIds: [focusedTopicId] }
+        : {}),
       ...(mode === "mark" && selectedMarkSource
         ? {
             pastPaperQuestionId: selectedMarkSource.id,
@@ -250,6 +268,7 @@ export function TutorShell() {
                 onClick={() => {
                   setSubject(option.id);
                   setPaperFilter("");
+                  setFocusedTopicId("");
                   setSelectedMarkSource(null);
                 }}
                 type="button"
@@ -309,6 +328,25 @@ export function TutorShell() {
         </header>
 
         <div className="learningToolbar">
+          <label className="topicFocusControl">
+            <span>Topic</span>
+            <select
+              aria-label="Focus topic"
+              onChange={(event) =>
+                setFocusedTopicId(event.target.value)
+              }
+              value={focusedTopicId}
+            >
+              <option value="">Any topic</option>
+              {subjectTopics.map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.parentId ? "↳ " : ""}
+                  {topic.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <div className="explanationControl">
             <span>Explanation</span>
             {(["simple", "standard", "full"] as const).map(
@@ -345,6 +383,20 @@ export function TutorShell() {
             </button>
           ) : null}
         </div>
+
+        {focusedTopic && mode !== "mark" ? (
+          <div className="topicFocusBanner">
+            <span>
+              Focused retrieval: <strong>{focusedTopic.label}</strong>
+            </span>
+            <button
+              onClick={() => setFocusedTopicId("")}
+              type="button"
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
 
         {mode === "mark" && selectedMarkSource ? (
           <div className="markingToolbar">

@@ -1106,3 +1106,76 @@ button {
   border-color: #47627d;
   color: #c7dced;
 }
+
+
+.topicFocusControl {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.topicFocusControl > span {
+  color: #68788b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topicFocusControl select {
+  max-width: 260px;
+  min-height: 29px;
+  border: 1px solid #263646;
+  border-radius: 7px;
+  background: #0f161e;
+  color: #9aabbd;
+  font: inherit;
+  font-size: 10px;
+  padding: 4px 26px 4px 7px;
+}
+
+.topicFocusBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 6px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(91 130 176 / 5%);
+  color: #718398;
+  font-size: 9px;
+}
+
+.topicFocusBanner strong {
+  color: #aebfd0;
+  font-weight: 650;
+}
+
+.topicFocusBanner button {
+  border: 0;
+  background: transparent;
+  color: #718398;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+}
+
+@media (max-width: 760px) {
+  .topicFocusControl {
+    width: 100%;
+  }
+
+  .topicFocusControl > span {
+    display: none;
+  }
+
+  .topicFocusControl select {
+    max-width: 180px;
+  }
+
+  .topicFocusBanner {
+    padding-inline: 16px;
+  }
+}
