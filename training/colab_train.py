@@ -125,7 +125,7 @@ def main() -> None:
         model=args.base_model,
         args=training_args,
         train_dataset=train_dataset,
-        validation_dataset=validation_dataset,
+        eval_dataset=validation_dataset,
         processing_class=tokenizer,
         peft_config=peft_config,
         quantization_config=quantization_config,
