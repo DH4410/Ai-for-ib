@@ -1196,3 +1196,21 @@ button {
   background: rgb(70 123 92 / 10%);
   color: #8db39d;
 }
+
+
+.markAward {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  border: 1px solid #355747;
+  border-radius: 8px;
+  background: rgb(70 123 92 / 8%);
+  color: #829a8c;
+  font-size: 10px;
+  padding: 5px 7px;
+}
+
+.markAward strong {
+  color: #a8c9b5;
+}

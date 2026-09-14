@@ -74,4 +74,29 @@ describe("retrieved-source prompting", () => {
     expect(prompt).toContain("Hints-first is enabled");
     expect(prompt).toContain("one useful next hint or question at a time");
   });
+
+  it("requires a structured mark footer only when maximum marks are available", () => {
+    const prompt = buildSystemPrompt({
+      mode: "mark",
+      retrievedContext: formatRetrievedContext([
+        {
+          id: "physics-q4",
+          locator: "May 2025 · HL · P2 · Q4",
+          marks: 2,
+          text:
+            "Question:\nCalculate the value.\n\nOfficial markscheme:\nAward 1 mark for method and 1 for answer.",
+          title: "Physics May 2025 HL Paper 2",
+        },
+      ]),
+      subject: "physics",
+    });
+
+    expect(prompt).toContain("MARK: awarded/maximum");
+    expect(prompt).toContain(
+      "May 2025 · HL · P2 · Q4 · 2 marks",
+    );
+    expect(prompt).toContain(
+      "If the maximum mark is not known, do not invent a MARK footer.",
+    );
+  });
 });

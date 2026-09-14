@@ -208,9 +208,17 @@ export function formatRetrievedContext(
   }
 
   return chunks
-    .map(
-      (chunk, index) =>
-        `[Source ${index + 1}] ${chunk.title}${chunk.locator ? ` — ${chunk.locator}` : ""}\n${chunk.text}`,
-    )
+    .map((chunk, index) => {
+      const metadata = [
+        chunk.locator,
+        chunk.marks !== undefined && chunk.marks !== null
+          ? `${chunk.marks} marks`
+          : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      return `[Source ${index + 1}] ${chunk.title}${metadata ? ` — ${metadata}` : ""}\n${chunk.text}`;
+    })
     .join("\n\n");
 }

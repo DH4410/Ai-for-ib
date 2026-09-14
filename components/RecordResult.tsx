@@ -31,9 +31,13 @@ const MISTAKE_OPTIONS = [
 export function RecordResult({
   source,
   subject,
+  suggestedScore,
+  suggestedMaximumMarks,
 }: {
   source?: SourceCitation;
   subject: Subject;
+  suggestedScore?: number;
+  suggestedMaximumMarks?: number;
 }) {
   const topics = useMemo(
     () =>
@@ -49,9 +53,23 @@ export function RecordResult({
   const [expanded, setExpanded] = useState(false);
   const [topicId, setTopicId] =
     useState(defaultTopicId);
-  const [score, setScore] = useState("");
+  const sourceMaximum = source?.marks;
+  const suggestionMatchesSource =
+    suggestedScore !== undefined &&
+    suggestedMaximumMarks !== undefined &&
+    (sourceMaximum === undefined ||
+      sourceMaximum === null ||
+      sourceMaximum === suggestedMaximumMarks);
+  const [score, setScore] = useState(
+    suggestionMatchesSource
+      ? suggestedScore.toString()
+      : "",
+  );
   const [maximumMarks, setMaximumMarks] = useState(
-    source?.marks?.toString() ?? "",
+    (
+      sourceMaximum ??
+      suggestedMaximumMarks
+    )?.toString() ?? "",
   );
   const [hintsUsed, setHintsUsed] = useState("0");
   const [confidence, setConfidence] = useState("");
@@ -159,7 +177,9 @@ export function RecordResult({
           onClick={() => setExpanded(true)}
           type="button"
         >
-          Record result
+          {suggestionMatchesSource
+            ? `Record ${suggestedScore}/${sourceMaximum ?? suggestedMaximumMarks}`
+            : "Record result"}
         </button>
         {status ? <span>{status}</span> : null}
       </div>

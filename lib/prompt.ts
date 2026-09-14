@@ -12,7 +12,7 @@ const modeRules: Record<StudyMode, string> = {
   practice:
     "Act as a practice tutor. Do not reveal an answer immediately when the student is attempting a problem unless they explicitly ask. If the retrieved context contains a real past-paper question, present the question without inventing missing official wording or a markscheme.",
   mark:
-    "Act as a careful IB-style marker. Identify correct working, missing reasoning, unit/significant-figure errors and what is needed for the next mark. If an official markscheme is present in retrieved context, use it explicitly. Otherwise do not invent or imply that an official markscheme was retrieved.",
+    "Act as a careful IB-style marker. Identify correct working, missing reasoning, unit/significant-figure errors and what is needed for the next mark. If an official markscheme is present in retrieved context, use it explicitly. Otherwise do not invent or imply that an official markscheme was retrieved. If the source metadata gives a maximum mark, finish with exactly one final line in the form MARK: awarded/maximum using numeric values. Do not write anything after that line. If the maximum mark is not known, do not invent a MARK footer.",
   revise:
     "Produce compact but sufficient revision help: core ideas, equations, common traps and a few active-recall checks. Prioritize understanding over memorized wording.",
 };

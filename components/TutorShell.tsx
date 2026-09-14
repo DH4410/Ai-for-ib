@@ -10,6 +10,10 @@ import {
 import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
+import {
+  parseMarkSuggestion,
+  stripMarkSuggestion,
+} from "@/lib/marking/score";
 import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
 import type {
   ChatTurn,
@@ -67,6 +71,24 @@ type VisibleTurn = ChatTurn & {
   mode: StudyMode;
   subject: Subject;
 };
+
+function markSuggestion(
+  turn: VisibleTurn,
+) {
+  return turn.role === "assistant" &&
+    turn.mode === "mark"
+    ? parseMarkSuggestion(turn.content)
+    : null;
+}
+
+function visibleTurnContent(
+  turn: VisibleTurn,
+): string {
+  return turn.role === "assistant" &&
+    turn.mode === "mark"
+    ? stripMarkSuggestion(turn.content)
+    : turn.content;
+}
 
 function progressSource(
   turn: VisibleTurn,
@@ -585,8 +607,17 @@ export function TutorShell() {
                       : "IB AI"}
                   </span>
                   <div className="turnText">
-                    {turn.content}
+                    {visibleTurnContent(turn)}
                   </div>
+                  {markSuggestion(turn) ? (
+                    <div className="markAward">
+                      Suggested mark:{" "}
+                      <strong>
+                        {markSuggestion(turn)!.score}/
+                        {markSuggestion(turn)!.maximumMarks}
+                      </strong>
+                    </div>
+                  ) : null}
                   {turn.sources &&
                   turn.sources.length > 0 ? (
                     <div className="sources">
@@ -642,6 +673,12 @@ export function TutorShell() {
                     <RecordResult
                       source={progressSource(turn)}
                       subject={turn.subject}
+                      suggestedMaximumMarks={
+                        markSuggestion(turn)?.maximumMarks
+                      }
+                      suggestedScore={
+                        markSuggestion(turn)?.score
+                      }
                     />
                   ) : null}
                 </article>
