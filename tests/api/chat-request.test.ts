@@ -15,6 +15,7 @@ describe("chat request validation", () => {
         filters: {
           paper: "p2",
           questionCount: 3,
+          requireMarkscheme: true,
           realPastPapersOnly: true,
           years: [2022, 2025],
         },
@@ -25,6 +26,7 @@ describe("chat request validation", () => {
     ).toEqual({
       paper: "p2",
       questionCount: 3,
+      requireMarkscheme: true,
       realPastPapersOnly: true,
       years: [2022, 2025],
     });

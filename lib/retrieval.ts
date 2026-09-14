@@ -22,6 +22,7 @@ export type StudyRetrievalFilters = {
   hintsFirst?: boolean;
   paper?: string;
   pastPaperQuestionId?: string;
+  requireMarkscheme?: boolean;
   realPastPapersOnly?: boolean;
   topicIds?: string[];
   years?: number[];
@@ -139,7 +140,9 @@ export function createStudyRetriever({
     if (wantsPastPaperQuestions(args.filters)) {
       const questions = await repository.searchPastPaperQuestions({
         limit,
-        pairedOnly: mode === "mark",
+        pairedOnly:
+          mode === "mark" ||
+          args.filters?.requireMarkscheme === true,
         paper: args.filters?.paper,
         query: args.query,
         subject: args.subject,

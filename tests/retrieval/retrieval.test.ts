@@ -173,4 +173,42 @@ describe("study retrieval façade", () => {
       "Official owned-fixture markscheme text",
     );
   });
+
+  it("filters real practice to paired questions when an official scheme is required", async () => {
+    const retrieve = createStudyRetriever({
+      repository: new InMemoryStudySourceRepository(
+        [],
+        [
+          pairedQuestion,
+          {
+            ...pairedQuestion,
+            id: "physics-m25-p2-q5",
+            markschemeText: null,
+            pairingStatus: "question_only",
+            questionNumber: "5",
+            score: 0.99,
+          },
+        ],
+      ),
+    });
+
+    const result = await retrieve({
+      filters: {
+        documentTypes: ["question-paper"],
+        realPastPapersOnly: true,
+        requireMarkscheme: true,
+      },
+      mode: "practice",
+      query: "thermal energy",
+      subject: "physics",
+    });
+
+    expect(result.map(({ id }) => id)).toEqual([
+      "physics-m25-p2-q4",
+    ]);
+    expect(result[0]?.pairingStatus).toBe("paired");
+    expect(result[0]?.text).not.toContain(
+      "Official markscheme",
+    );
+  });
 });

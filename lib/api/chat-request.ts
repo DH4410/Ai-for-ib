@@ -24,6 +24,7 @@ export type ChatRequestFilters = {
   paper?: string;
   pastPaperQuestionId?: string;
   questionCount?: number;
+  requireMarkscheme?: boolean;
   realPastPapersOnly?: boolean;
   topicIds?: string[];
   years?: number[];
@@ -115,7 +116,11 @@ function parseFilters(value: unknown): ChatRequestFilters | undefined {
     filters.pastPaperQuestionId =
       value.pastPaperQuestionId;
   }
-  for (const booleanField of ["realPastPapersOnly", "hintsFirst"] as const) {
+  for (const booleanField of [
+    "realPastPapersOnly",
+    "requireMarkscheme",
+    "hintsFirst",
+  ] as const) {
     if (value[booleanField] !== undefined) {
       if (typeof value[booleanField] !== "boolean") {
         return invalid(`filters.${booleanField} must be true or false`);

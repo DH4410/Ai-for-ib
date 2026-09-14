@@ -1214,3 +1214,23 @@ button {
 .markAward strong {
   color: #a8c9b5;
 }
+
+
+.schemeOnlyToggle {
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: #77879a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  padding: 0 9px;
+}
+
+.schemeOnlyToggle:hover,
+.schemeOnlyToggle.active {
+  border-color: #355747;
+  background: rgb(70 123 92 / 9%);
+  color: #9fc1aa;
+}

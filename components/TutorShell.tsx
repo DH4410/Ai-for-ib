@@ -110,6 +110,8 @@ export function TutorShell() {
   const [yearFilter, setYearFilter] = useState("");
   const [realQuestionCount, setRealQuestionCount] =
     useState<1 | 3 | 5>(1);
+  const [requireMarkscheme, setRequireMarkscheme] =
+    useState(false);
   const [explanationLevel, setExplanationLevel] =
     useState<"simple" | "standard" | "full">("standard");
   const [hintsFirst, setHintsFirst] = useState(true);
@@ -194,6 +196,7 @@ export function TutorShell() {
                   documentTypes: ["question-paper"],
                   paper: paperFilter || undefined,
                   questionCount: realQuestionCount,
+                  requireMarkscheme,
                   realPastPapersOnly: true,
                   years: yearFilter
                     ? [Number(yearFilter)]
@@ -540,6 +543,23 @@ export function TutorShell() {
                     <option value={5}>5</option>
                   </select>
                 </label>
+
+                <button
+                  aria-pressed={requireMarkscheme}
+                  className={
+                    requireMarkscheme
+                      ? "schemeOnlyToggle active"
+                      : "schemeOnlyToggle"
+                  }
+                  onClick={() =>
+                    setRequireMarkscheme(
+                      (current) => !current,
+                    )
+                  }
+                  type="button"
+                >
+                  Official scheme only
+                </button>
 
                 <span className="verifiedSourceNote">
                   Exact indexed wording
