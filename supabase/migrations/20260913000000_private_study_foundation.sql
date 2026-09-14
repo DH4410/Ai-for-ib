@@ -727,6 +727,75 @@ grant execute on function public.search_private_past_paper_questions(
 ) to service_role;
 
 
+create or replace function public.get_private_past_paper_question(
+  p_question_id text
+)
+returns table (
+  id text,
+  document_id uuid,
+  subject text,
+  title text,
+  locator text,
+  question_text text,
+  markscheme_text text,
+  topic_ids text[],
+  year integer,
+  paper text,
+  question_number text,
+  marks integer,
+  pairing_status text,
+  score real
+)
+language sql
+stable
+security definer
+set search_path = pg_catalog, private
+as $
+  select
+    question.id,
+    question.source_question_document_id,
+    question.subject,
+    question_document.title,
+    concat_ws(
+      ' · ',
+      initcap(question.session) || ' ' || question.year::text,
+      question.timezone,
+      question.level,
+      upper(question.paper),
+      'Q' || question.question_number ||
+        coalesce(question.subquestion, '')
+    ) as locator,
+    question.question_text,
+    question.markscheme_text,
+    coalesce(
+      array_agg(distinct mapping.topic_id)
+        filter (where mapping.topic_id is not null),
+      '{}'
+    ) as topic_ids,
+    question.year,
+    question.paper,
+    question.question_number,
+    question.marks,
+    question.pairing_status,
+    1::real as score
+  from private.past_paper_questions question
+  join private.documents question_document
+    on question_document.id =
+      question.source_question_document_id
+  left join private.past_paper_question_topics mapping
+    on mapping.past_paper_question_id = question.id
+  where question.id = p_question_id
+    and cardinality(question.asset_references) = 0
+  group by question.id, question_document.title
+  limit 1;
+$;
+
+revoke all on function public.get_private_past_paper_question(text)
+  from public, anon, authenticated;
+grant execute on function public.get_private_past_paper_question(text)
+  to service_role;
+
+
 create or replace function public.record_private_learning_attempt(
   p_student_id uuid,
   p_attempt jsonb,
@@ -1317,6 +1386,9 @@ revoke all on function public.index_private_study_source(
 revoke all on function public.search_private_past_paper_questions(
   text, text, integer[], text, text[], boolean, integer
 ) from public, anon, authenticated;
+revoke all on function public.get_private_past_paper_question(
+  text
+) from public, anon, authenticated;
 revoke all on function public.record_private_learning_attempt(
   uuid, jsonb, jsonb
 ) from public, anon, authenticated;
@@ -1341,6 +1413,9 @@ grant execute on function public.index_private_study_source(
 ) to service_role;
 grant execute on function public.search_private_past_paper_questions(
   text, text, integer[], text, text[], boolean, integer
+) to service_role;
+grant execute on function public.get_private_past_paper_question(
+  text
 ) to service_role;
 grant execute on function public.record_private_learning_attempt(
   uuid, jsonb, jsonb

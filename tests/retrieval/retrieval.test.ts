@@ -139,4 +139,38 @@ describe("study retrieval façade", () => {
       "Official markscheme",
     );
   });
+
+  it("pins an exact selected question and includes its official scheme only in mark mode", async () => {
+    const retrieve = createStudyRetriever({
+      repository: new InMemoryStudySourceRepository(
+        [],
+        [
+          pairedQuestion,
+          {
+            ...pairedQuestion,
+            id: "physics-m25-p2-q9",
+            questionNumber: "9",
+            questionText: "Different fixture question.",
+          },
+        ],
+      ),
+    });
+
+    const result = await retrieve({
+      filters: {
+        pastPaperQuestionId: "physics-m25-p2-q4",
+      },
+      mode: "mark",
+      query:
+        "This answer text deliberately does not resemble the question.",
+      subject: "physics",
+    });
+
+    expect(result.map(({ id }) => id)).toEqual([
+      "physics-m25-p2-q4",
+    ]);
+    expect(result[0]?.text).toContain(
+      "Official owned-fixture markscheme text",
+    );
+  });
 });

@@ -8,6 +8,7 @@ const RPC_NAMES = [
   "search_private_study_chunks_vector",
   "index_private_study_source",
   "search_private_past_paper_questions",
+  "get_private_past_paper_question",
   "record_private_learning_attempt",
   "get_private_learning_progress",
   "index_private_past_paper",

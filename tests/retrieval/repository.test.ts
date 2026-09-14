@@ -104,4 +104,24 @@ describe("study source repository", () => {
       "physics-m25-p2-q4",
     ]);
   });
+
+  it("loads an exact past-paper question without fuzzy ranking", async () => {
+    const repository = new InMemoryStudySourceRepository(
+      [],
+      pastPapers,
+    );
+
+    await expect(
+      repository.getPastPaperQuestion(
+        "physics-m24-p1a-q1",
+      ),
+    ).resolves.toMatchObject({
+      id: "physics-m24-p1a-q1",
+      pairingStatus: "question_only",
+    });
+
+    await expect(
+      repository.getPastPaperQuestion("missing"),
+    ).resolves.toBeNull();
+  });
 });

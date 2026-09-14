@@ -22,6 +22,7 @@ export type ChatRequestFilters = {
   explanationLevel?: "simple" | "standard" | "full";
   hintsFirst?: boolean;
   paper?: string;
+  pastPaperQuestionId?: string;
   realPastPapersOnly?: boolean;
   topicIds?: string[];
   years?: number[];
@@ -87,6 +88,20 @@ function parseFilters(value: unknown): ChatRequestFilters | undefined {
       return invalid("filters.paper must be one of p1a, p1b, p1, p2, or p3");
     }
     filters.paper = value.paper.toLocaleLowerCase();
+  }
+  if (value.pastPaperQuestionId !== undefined) {
+    if (
+      typeof value.pastPaperQuestionId !== "string" ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,239}$/.test(
+        value.pastPaperQuestionId,
+      )
+    ) {
+      return invalid(
+        "filters.pastPaperQuestionId must be a valid question identifier",
+      );
+    }
+    filters.pastPaperQuestionId =
+      value.pastPaperQuestionId;
   }
   for (const booleanField of ["realPastPapersOnly", "hintsFirst"] as const) {
     if (value[booleanField] !== undefined) {

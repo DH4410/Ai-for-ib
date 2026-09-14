@@ -67,6 +67,9 @@ export interface StudySourceRepository {
   searchPastPaperQuestions(
     request: PastPaperRetrievalRequest,
   ): Promise<RankedPastPaperQuestion[]>;
+  getPastPaperQuestion(
+    questionId: string,
+  ): Promise<RankedPastPaperQuestion | null>;
 }
 
 function containsEveryTopic(
@@ -202,6 +205,21 @@ export class InMemoryStudySourceRepository implements StudySourceRepository {
     );
 
     return capAndSortPastPapers(candidates, request.limit);
+  }
+
+  async getPastPaperQuestion(
+    questionId: string,
+  ): Promise<RankedPastPaperQuestion | null> {
+    const question = this.pastPaperQuestions.find(
+      ({ id }) => id === questionId,
+    );
+
+    return question
+      ? {
+          ...question,
+          score: question.score ?? 1,
+        }
+      : null;
   }
 }
 
@@ -352,5 +370,24 @@ export class SupabaseStudySourceRepository implements StudySourceRepository {
     return ((data ?? []) as RpcPastPaperRow[]).map(
       toRankedPastPaperQuestion,
     );
+  }
+
+  async getPastPaperQuestion(
+    questionId: string,
+  ): Promise<RankedPastPaperQuestion | null> {
+    const { data, error } = await this.client.rpc(
+      "get_private_past_paper_question",
+      {
+        p_question_id: questionId,
+      },
+    );
+    if (error) {
+      throw new Error(
+        `loading private past-paper question failed: ${error.message}`,
+      );
+    }
+
+    const row = ((data ?? []) as RpcPastPaperRow[])[0];
+    return row ? toRankedPastPaperQuestion(row) : null;
   }
 }

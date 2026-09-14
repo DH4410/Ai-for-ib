@@ -21,6 +21,7 @@ export type StudyRetrievalFilters = {
   explanationLevel?: "simple" | "standard" | "full";
   hintsFirst?: boolean;
   paper?: string;
+  pastPaperQuestionId?: string;
   realPastPapersOnly?: boolean;
   topicIds?: string[];
   years?: number[];
@@ -118,6 +119,22 @@ export function createStudyRetriever({
   ): Promise<SourceChunk[]> {
     const limit = args.limit ?? 8;
     const mode = args.mode ?? "learn";
+
+    if (args.filters?.pastPaperQuestionId) {
+      const question =
+        await repository.getPastPaperQuestion(
+          args.filters.pastPaperQuestionId,
+        );
+
+      if (
+        !question ||
+        question.subject !== args.subject
+      ) {
+        return [];
+      }
+
+      return [toPastPaperSourceChunk(question, mode)];
+    }
 
     if (wantsPastPaperQuestions(args.filters)) {
       const questions = await repository.searchPastPaperQuestions({

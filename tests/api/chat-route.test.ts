@@ -211,4 +211,44 @@ describe("chat API route", () => {
     expect(response.status).toBe(503);
     expect(retrieveStudyContext).not.toHaveBeenCalled();
   });
+
+  it("refuses to mark a different question when a pinned paper question disappears", async () => {
+    const generateTutorAnswer = vi.fn(async () => ({
+      model: "should-not-run",
+      text: "Wrong mark",
+    }));
+    const handler = createChatPostHandler({
+      generateTutorAnswer,
+      retrieveStudyContext: async () => [],
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/chat", {
+        body: JSON.stringify({
+          filters: {
+            pastPaperQuestionId:
+              "physics-m25-hl-tz2-p2-qp-q4",
+          },
+          message: "My answer is 12 J.",
+          mode: "mark",
+          subject: "physics",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
+    const body = (await response.json()) as {
+      answer: string;
+      model: string;
+    };
+
+    expect(response.status).toBe(200);
+    expect(generateTutorAnswer).not.toHaveBeenCalled();
+    expect(body.model).toBe("retrieval-only");
+    expect(body.answer).toContain(
+      "exact past-paper question",
+    );
+  });
 });

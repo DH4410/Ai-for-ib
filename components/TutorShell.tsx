@@ -85,10 +85,14 @@ export function TutorShell() {
   const [explanationLevel, setExplanationLevel] =
     useState<"simple" | "standard" | "full">("standard");
   const [hintsFirst, setHintsFirst] = useState(true);
+  const [selectedMarkSource, setSelectedMarkSource] =
+    useState<SourceCitation | null>(null);
 
   const placeholder = useMemo(() => {
     if (mode === "mark") {
-      return "Paste your answer and the question you answered…";
+      return selectedMarkSource?.locator
+        ? `Paste your answer to ${selectedMarkSource.locator}…`
+        : "Paste your answer and the question you answered…";
     }
     if (mode === "practice") {
       return realPastPapers
@@ -99,7 +103,7 @@ export function TutorShell() {
       return "Revise atomic structure with me…";
     }
     return "Explain a topic, equation or question…";
-  }, [mode, realPastPapers]);
+  }, [mode, realPastPapers, selectedMarkSource]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -115,6 +119,11 @@ export function TutorShell() {
     }));
     const filters = {
       explanationLevel,
+      ...(mode === "mark" && selectedMarkSource
+        ? {
+            pastPaperQuestionId: selectedMarkSource.id,
+          }
+        : {}),
       ...(mode === "practice"
         ? {
             hintsFirst,
@@ -226,6 +235,7 @@ export function TutorShell() {
                 onClick={() => {
                   setSubject(option.id);
                   setPaperFilter("");
+                  setSelectedMarkSource(null);
                 }}
                 type="button"
               >
@@ -317,6 +327,26 @@ export function TutorShell() {
             </button>
           ) : null}
         </div>
+
+        {mode === "mark" && selectedMarkSource ? (
+          <div className="markingToolbar">
+            <div>
+              <span className="eyebrow">Pinned paper question</span>
+              <strong>
+                {selectedMarkSource.title}
+                {selectedMarkSource.locator
+                  ? ` · ${selectedMarkSource.locator}`
+                  : ""}
+              </strong>
+            </div>
+            <button
+              onClick={() => setSelectedMarkSource(null)}
+              type="button"
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
 
         {mode === "practice" ? (
           <div className="practiceToolbar">
@@ -451,16 +481,34 @@ export function TutorShell() {
                   turn.sources.length > 0 ? (
                     <div className="sources">
                       {turn.sources.map((source) => (
-                        <span key={source.id}>
-                          {source.title}
-                          {source.locator
-                            ? ` · ${source.locator}`
-                            : ""}
-                          {source.marks !== undefined &&
-                          source.marks !== null
-                            ? ` · ${source.marks} marks`
-                            : ""}
-                        </span>
+                        <div className="sourceCitation" key={source.id}>
+                          <span>
+                            {source.title}
+                            {source.locator
+                              ? ` · ${source.locator}`
+                              : ""}
+                            {source.marks !== undefined &&
+                            source.marks !== null
+                              ? ` · ${source.marks} marks`
+                              : ""}
+                          </span>
+                          {turn.mode === "practice" &&
+                          source.documentType ===
+                            "question-paper" ? (
+                            <button
+                              onClick={() => {
+                                setSelectedMarkSource(source);
+                                setMode("mark");
+                                setInput("");
+                              }}
+                              type="button"
+                            >
+                              {source.pairingStatus === "paired"
+                                ? "Mark this"
+                                : "Mark (no scheme)"}
+                            </button>
+                          ) : null}
+                        </div>
                       ))}
                     </div>
                   ) : null}

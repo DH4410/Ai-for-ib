@@ -87,6 +87,20 @@ export function createChatPostHandler(
         });
 
       if (
+        parsedRequest.filters?.pastPaperQuestionId &&
+        sources.length === 0
+      ) {
+        const response: TutorResponse = {
+          answer:
+            "I can no longer load the exact past-paper question you selected, so I won't mark your answer against a different question. Re-open a real paper question and choose “Mark this” again.",
+          model: "retrieval-only",
+          sources: [],
+        };
+
+        return NextResponse.json(response);
+      }
+
+      if (
         parsedRequest.filters?.realPastPapersOnly === true &&
         sources.length === 0
       ) {

@@ -315,12 +315,29 @@ button {
   margin-top: 12px;
 }
 
-.sources span {
+.sourceCitation {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sourceCitation > span {
   border: 1px solid #293646;
   background: #10161e;
   border-radius: 8px;
   color: #8fa1b5;
   font-size: 10px;
+  padding: 5px 7px;
+}
+
+.sourceCitation > button {
+  border: 1px solid #31445a;
+  border-radius: 7px;
+  background: #14202c;
+  color: #a9c5dd;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
   padding: 5px 7px;
 }
 
@@ -1019,5 +1036,49 @@ button {
 @media (max-width: 760px) {
   .sourceLibraryPanel {
     display: none;
+  }
+}
+
+
+.markingToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 54px;
+  padding: 9px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(98 153 208 / 8%);
+}
+
+.markingToolbar > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.markingToolbar strong {
+  overflow: hidden;
+  color: #b7cce0;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.markingToolbar > button {
+  border: 1px solid #31445a;
+  border-radius: 7px;
+  background: transparent;
+  color: #8094a8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  padding: 5px 7px;
+}
+
+@media (max-width: 760px) {
+  .markingToolbar {
+    padding-inline: 16px;
   }
 }
