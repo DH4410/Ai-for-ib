@@ -219,3 +219,18 @@ Gemma 3 4B remains a useful optional comparison, but its Hugging Face checkpoint
 Qwen3 chat templates enable thinking by default. The public candidate registry therefore sets `enableThinking: false` for the default Qwen3 tutoring benchmark. This prevents hidden/reasoning text from consuming the generation budget and keeps the first comparison focused on normal interactive tutoring latency and response quality.
 
 Do not interpret this as a claim that reasoning mode is worse. If the non-thinking benchmark selects Qwen3 as a strong candidate, run a separate reasoning-focused evaluation for difficult Mathematics/Physics problems before deciding whether the deployed tutor should expose a reasoning mode.
+
+
+## Post-training adapter smoke test
+
+After QLoRA finishes, load the base model and saved adapter once before doing a longer evaluation:
+
+```bash
+!python training/smoke_adapter.py \
+  --base-model "<same-base-model-used-for-training>" \
+  --adapter "/content/drive/MyDrive/ai-for-ib/checkpoints/Dima-IB-Tutor-v1"
+```
+
+The smoke test verifies that the adapter can be loaded, produces a non-trivial tutoring response, and uses the candidate registry's explicit Qwen thinking-mode setting. For default Qwen3 candidates that means non-thinking mode; the script fails if a `<think>` block appears unexpectedly.
+
+This is only a plumbing check. A checkpoint still has to beat the unmodified base model on the held-out private evaluation set before promotion.
