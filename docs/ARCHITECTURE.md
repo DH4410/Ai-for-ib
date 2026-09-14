@@ -2,125 +2,107 @@
 
 ## Product boundary
 
-AI for IB is a standalone study application. The browser talks to this application's API, and the API talks to a model endpoint and private study repository that we control.
+AI for IB is a standalone study application. Browser-safe code receives only a Supabase publishable key. Private database credentials, licensed source text and model credentials remain server-side.
 
-It is intentionally **not coupled to ChatGPT**.
+Once a private source repository is configured, the chat route validates the learner's Supabase access token **before retrieval**. Anonymous model-only/mock development remains possible when no private repository is connected.
 
-## Request path
+## Chat request path
 
 ```text
 Browser
-  -> Next.js /api/chat
-     -> request validation
-     -> retrieval filters
-     -> lexical + vector source search
-     -> reciprocal-rank fusion
-     -> citation-aware tutor prompt
-     -> self-hosted model endpoint
+  -> /api/chat
+     -> validate request
+     -> if private sources configured:
+          validate Supabase user
+          load subject mastery + recurring mistakes
+     -> apply retrieval filters
+     -> textbook: lexical + optional vector search + rank fusion
+        OR
+        real paper: structured question search
+     -> build cited + personalized tutor prompt
+     -> self-hosted /v1/chat/completions
   <- answer + safe citation metadata
 ```
 
-Private chunk text is used server-side as model context. The browser receives only stable citation metadata such as source ID, title, locator, document type, topic IDs and page/question fields.
+Raw private passages are never returned by the chat API. Citation responses contain only stable metadata such as source title, locator, pages, paper/year/question fields, marks and topic IDs.
 
-## Model layer
+## Study modes
 
-The implementation expects an OpenAI-compatible `/v1/chat/completions` endpoint because that protocol is supported by self-hosted inference servers such as vLLM.
+The prompt layer supports:
 
-That is only the wire protocol. The model itself can be an open-weight model hosted on our own GPU infrastructure.
+- Learn;
+- Practice;
+- Mark my work;
+- Revise;
+- Simple / Standard / Full explanation depth;
+- Hints-first practice.
 
-Planned model work:
-
-1. benchmark suitable base models for IB Physics/Chemistry/Math;
-2. build owned or permitted tutor/marking instruction data;
-3. fine-tune with LoRA/QLoRA in Google Colab or another GPU environment;
-4. evaluate against a held-out IB-style benchmark;
-5. deploy the selected checkpoint behind the same model API.
-
-Textbook passages are **not** the primary fine-tuning strategy. Factual course content stays in retrieval so it can remain source-aware and updateable.
+Real-past-paper mode is strict: if no matching indexed real question exists, the API does not ask the model to invent one and label it as real.
 
 ## Knowledge layer
 
-The implemented source pipeline is:
-
 ```text
-authorized local file
-  -> private materialization + SHA-256 manifest
-  -> PDF page extraction
-  -> OCR-required page detection
-  -> semantic/page-aware chunking
-  -> IB topic classification
-  -> private Supabase persistence
-  -> lexical + vector search
-  -> filter-first rank fusion
-  -> cited model context
+authorized local PDF
+  -> immutable private materialization + SHA-256 provenance
+  -> page extraction
+  -> OCR-required detection
+  -> page-aware chunks
+  -> IB taxonomy classification
+  -> private Supabase indexing
+  -> lexical/vector retrieval
+  -> cited tutor context
 ```
 
-Use retrieval for:
-
-- licensed textbooks;
-- syllabus/specification documents;
-- student notes;
-- worked examples;
-- past-paper questions;
-- markschemes.
-
-Each chunk keeps source metadata, original page ranges, heading paths and stable identifiers.
+The source catalog returns counts/metadata only. It never exposes source text, storage paths, signed URLs or provider credentials.
 
 ## Past papers
 
-Question papers and markschemes are represented as structured records rather than treated only as whole PDFs.
+Papers are stored as structured question records with normalized subject, syllabus version, level, year/session/timezone, paper/component, question/subquestion, visible marks, command terms, topic classification and optional verified markscheme text.
 
-The parser/pairing layer normalizes:
+Pairing is conservative. A record is `paired` only when the full paper identity and question locator match. Missing schemes remain `question_only`; ambiguous matches are skipped. Text that explicitly depends on a missing graph/diagram/figure is tagged `visual-context-required` and excluded from retrieval until asset rendering is implemented.
 
-- subject;
-- syllabus version;
-- topic/subtopic;
-- session and year;
-- timezone;
-- level;
-- paper/component;
-- language;
-- question/sub-question;
-- marks where visible;
-- command terms where available;
-- question body;
-- required figures/assets;
-- markscheme linkage;
-- source locator.
+## Learner model
 
-Pairing is conservative: a paper is `paired` only when one unique markscheme matches the full key. Missing schemes remain `question_only`; collisions remain `ambiguous` for manual review.
+Learning state remains separate from LLM weights:
 
-## Student model
-
-Learning state belongs in the database, not in LLM weights:
-
-- attempts;
-- scores;
+- attempts and scores;
 - hints used;
-- misconceptions;
 - confidence;
-- topic mastery estimates;
-- spaced-repetition due dates.
+- recurring mistake tags;
+- mastery estimate;
+- next review date.
 
-This gives personalization without retraining the model after every study session.
+A deterministic mastery function updates the state. The model receives only a compact summary of weak/review-due topics and recurring mistakes. The prompt explicitly prevents learner-state hints from overriding source evidence or official marking criteria.
 
-## Storage and database boundary
+## Model layer
 
-The Supabase migration creates a non-exposed `private` schema for documents, versions, pages, chunks, topics, past-paper records and learner state.
+The runtime speaks the OpenAI-compatible chat-completions protocol so it can use self-hosted servers such as vLLM.
 
-Source search is exposed only through constrained server-side RPCs executed with the service role. The browser never receives the service-role key or direct private-storage access.
+Training is behavior-focused. Licensed textbook/past-paper content remains in retrieval unless separate training rights exist.
 
-The vector schema currently uses 1,024-dimensional embeddings, matching the configured self-hosted embedding endpoint.
+The repository includes:
 
-## Security / copyright
+1. a private dataset validator;
+2. sequential low-VRAM base-model benchmarking;
+3. QLoRA fine-tuning in Colab;
+4. held-out base-vs-candidate evaluation.
 
-The GitHub repository may remain public, but licensed books, papers, markschemes, extracted source text, page images, signed URLs, cookies, model weights and credentials must remain outside Git.
+## Database boundary
 
-The repository enforces this with:
+The database foundation uses a non-exposed `private` schema. Browser roles do not receive direct access to source or learner tables.
 
-- ignored private source/index/report paths;
-- extension checks for common study binaries and model weights;
-- `npm run verify:private`;
-- CI verification before tests/typechecking/build.
+Server RPCs are `SECURITY DEFINER` only where needed to cross the private-schema boundary. Every such RPC:
 
-See `docs/INGESTION.md` and `docs/PAST_PAPERS.md` for the operating workflow.
+- pins a trusted search path that excludes `public`;
+- has execution explicitly revoked from `PUBLIC`, `anon` and `authenticated`;
+- grants execution only to `service_role`;
+- is reached from browser requests only through authenticated Next.js APIs.
+
+The frontend never receives a secret/service-role key.
+
+## Current limitations
+
+- OCR-required pages are detected but not yet OCR-processed.
+- Visual assets from paper questions are not yet extracted/rendered.
+- Real source content must still be ingested privately.
+- A production model checkpoint still needs to be selected by the private IB benchmark and deployed.

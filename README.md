@@ -1,52 +1,54 @@
 # AI for IB
 
-A private, standalone AI tutor for the IB Diploma Programme.
+AI for IB is a private, standalone tutor for **IB Physics, Chemistry and Mathematics AA**. The browser talks to this app's own API; the API can use licensed/private study sources and a self-hosted open-weight model. It is not coupled to the ChatGPT product.
 
-The goal is to build a dedicated study system for **Physics, Chemistry and Mathematics** that can:
+## What is implemented
 
-- teach syllabus topics at the right level;
-- retrieve from the student's own licensed textbooks and notes;
-- practise with indexed IB-style/past-paper questions;
-- mark answers against markschemes;
-- give hints before revealing full solutions;
-- track weak areas and recurring mistakes;
-- run against a **self-hosted open-weight model**, not the ChatGPT product.
+- Physics, Chemistry and Mathematics workspaces with **Learn**, **Practice**, **Mark my work** and **Revise** modes.
+- **Simple / Standard / Full** explanation depth plus a **Hints first** practice switch.
+- A self-hosted OpenAI-compatible model adapter and a mock development model.
+- Auth-gated private retrieval: once licensed sources are configured, the tutor validates the Supabase session **before** any source search runs.
+- Hybrid lexical + vector retrieval with citation metadata only returned to the browser.
+- A 93-node IB taxonomy covering current Physics/Chemistry section structures and the applicable Mathematics AA course structure.
+- A safe, authenticated **Source Library** showing indexed source names/counts without paths, raw text or provider credentials.
+- Structured real-past-paper retrieval with year/paper/topic filters.
+- Conservative question/markscheme pairing: missing schemes stay `question_only`; ambiguous matches are never guessed.
+- Visual-dependent paper questions are withheld until their figures can be preserved/rendered.
+- Magic-link sign-in and private learner progress.
+- Deterministic mastery updates, spaced review dates, confidence/hint evidence and recurring mistake tags.
+- Saved mastery/mistakes personalize future tutor prompts without overriding source evidence or official marking criteria.
+- Private PDF materialization, checksums, page-aware extraction, OCR-required detection, chunking and topic classification.
+- One-command private textbook indexing and one-command authorized local past-paper indexing.
+- Colab-ready QLoRA training, base-vs-candidate evaluation, and a sequential 4-bit benchmark for Qwen3-4B, Qwen3-8B and Phi-4-mini-instruct.
+- CI for the private-data boundary, tests, TypeScript, Python syntax and production build.
 
 ## Architecture
 
 ```text
 Browser / phone
       |
+      +--> Supabase Auth (publishable key only)
+      |
       v
-Next.js study app
+Next.js app
       |
-      +--> Tutor API
-      |       |
-      |       +--> Hybrid cited retrieval
-      |       +--> Student learning profile
-      |       +--> Self-hosted model server
+      +--> /api/chat
+      |      |-- validate request/session
+      |      |-- load learner mastery
+      |      |-- private cited retrieval
+      |      '-- self-hosted model endpoint
       |
-      +--> Progress / practice / source library
+      +--> /api/progress
+      |      '-- private attempts/mastery
+      |
+      +--> /api/sources
+             '-- safe source inventory only
+
+Private Supabase schema
+  |-- licensed source text/chunks
+  |-- structured past papers/markschemes
+  '-- learner state
 ```
-
-The model layer uses an OpenAI-compatible HTTP protocol only as an API format, so it can point at a self-hosted server such as **vLLM**. It does not require ChatGPT.
-
-## Current foundation
-
-The repository now includes:
-
-1. a standalone Next.js tutor UI with Physics, Chemistry and Mathematics workspaces;
-2. learn, practice, marking and revision modes;
-3. a self-hosted model adapter plus a development mock model;
-4. a private-source safety boundary that keeps licensed study material out of Git;
-5. local PDF materialization and page-aware extraction;
-6. IB topic classification and conservative paper/markscheme pairing;
-7. a private Supabase/pgvector schema and server-only source repository;
-8. hybrid lexical/vector retrieval with stable citations;
-9. validated source-aware chat requests and citation-only API responses;
-10. tests and CI for privacy, retrieval, ingestion and API behavior;\n11. a private training-data validator and Colab-ready QLoRA fine-tuning runner;\n12. a base-vs-candidate evaluation harness for repeatable tutor benchmarking;\n13. an end-to-end private source index loader for lexical and optional vector retrieval.
-
-The next product milestones are source ingestion with the user's authorized files, model benchmarking/evaluation, and the learning-progress layer. The initial Colab fine-tuning scaffold is in `training/README.md`.
 
 ## Local development
 
@@ -56,17 +58,13 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Then open http://localhost:3000.
-
-For development without a GPU server, set:
+For UI/API development without a GPU server:
 
 ```env
 USE_MOCK_MODEL=true
 ```
 
-## Model server
-
-Configure a private model server:
+The production model path is:
 
 ```env
 MODEL_BASE_URL=http://localhost:8000/v1
@@ -74,7 +72,7 @@ MODEL_NAME=Dima-IB-Tutor-v1
 MODEL_API_KEY=
 ```
 
-The retrieval layer can use a separately hosted embedding endpoint:
+Optional hybrid embeddings:
 
 ```env
 EMBEDDING_BASE_URL=http://localhost:8001/v1
@@ -82,23 +80,46 @@ EMBEDDING_MODEL=BAAI/bge-m3
 EMBEDDING_API_KEY=
 ```
 
-## Private study sources
+## Dedicated Supabase project
 
-Licensed textbooks, IB papers, markschemes, extracted text, page images, model weights and credentials must **never** be committed to this public repository.
+Do **not** point this repository at an unrelated Supabase project. Use a dedicated AI-for-IB project, apply `supabase/migrations/20260913000000_private_study_foundation.sql`, then configure:
 
-Start with the metadata-only inventory in `data/source-inventory.example.json`, then follow:
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
-- `docs/INGESTION.md` for authorized local textbook/source ingestion;
-- `docs/PAST_PAPERS.md` for paper/markscheme pairing and indexing.
+SUPABASE_URL=
+SUPABASE_SECRET_KEY=
+```
 
-The local pipeline writes raw and derived study data only under ignored paths such as `private-sources/`, `private-index/`, `data/source-manifest.jsonl`, and `data/ingestion-reports/`.
+`SUPABASE_SECRET_KEY` is server-only. The legacy `SUPABASE_SERVICE_ROLE_KEY` remains a fallback while migrating existing setups.
 
-Run this before any commit:
+Once private study sources are configured, user authentication is required before `/api/chat` can access them.
+
+## Private study material
+
+Licensed textbooks, papers, markschemes, extracted text, page images, training/evaluation data, model weights and credentials must never be committed to this public repository.
+
+Relevant ignored paths include:
+
+```text
+private-sources/
+private-index/
+data/source-manifest.jsonl
+data/ingestion-reports/
+training/private-data/
+training/outputs/
+models/
+```
+
+Before committing:
 
 ```bash
 npm run verify:private
 ```
 
-## Copyright / source handling
+See `docs/INGESTION.md`, `docs/PAST_PAPERS.md` and `training/README.md` for the operational workflows.
 
-Use only study material the user is allowed to access. Download files through normal authorized access, then pass the local file to the ingestion CLI. The repository intentionally does not include automation for bypassing authentication, paywalls, CAPTCHA, access controls or provider restrictions.
+## What still requires real private inputs/infrastructure
+
+The code path is built, but the repository intentionally does not contain the user's licensed PDFs, real past-paper text, private training/evaluation datasets, Supabase credentials, or model weights. To make the tutor fully useful, those must be supplied through the authorized private workflows and the selected model must be benchmarked/deployed.

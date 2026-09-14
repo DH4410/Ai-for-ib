@@ -1,50 +1,36 @@
 # Private source ingestion
 
-This document explains how to add study files that **you are authorized to access** without putting the files or their extracted contents in the public Git repository.
+This workflow adds study files that **you are authorized to access** while keeping the files and extracted contents out of public Git.
 
-## What stays public vs private
+## Public vs private
 
-Public Git may contain:
+Public Git may contain ingestion/retrieval code, metadata-only source inventory records and tiny owned fixtures.
 
-- ingestion/retrieval code;
-- metadata-only source inventory records;
-- tests built from tiny owned fixtures;
-- safe source IDs and non-secret provider references.
+Never commit textbook/paper/markscheme PDFs, extracted source text, page images, real manifests, private ingestion reports, signed URLs, cookies, credentials, training/evaluation data or model weights.
 
-Public Git must not contain:
-
-- textbook or paper PDFs;
-- markscheme PDFs;
-- extracted textbook/paper text;
-- page images;
-- the real source manifest;
-- ingestion reports containing private processing state;
-- signed URLs, cookies, authorization headers or credentials;
-- model weights.
-
-The relevant local paths are ignored by Git:
+Ignored working paths include:
 
 ```text
 private-sources/
 private-index/
 data/source-manifest.jsonl
 data/ingestion-reports/
+training/private-data/
+training/outputs/
 models/
 ```
 
-Before committing anything, run:
+Always run:
 
 ```bash
 npm run verify:private
 ```
 
-## 1. Obtain the file normally
+## 1. Obtain files normally
 
-Use the provider's normal browser/app download flow while signed into your own authorized account.
+Use the provider's normal authorized browser/app download flow. The ingestion CLIs intentionally accept **local file paths**, not URLs, cookies or login tokens.
 
-Do not put a temporary download URL, cookie, token or login credential into the inventory or source manifest. The ingestion CLI accepts a **local file path only** and intentionally does not accept URLs.
-
-For the first textbook set, the metadata inventory already contains:
+Metadata-only textbook records currently include:
 
 | Source ID | Subject | Expected source |
 | --- | --- | --- |
@@ -52,11 +38,9 @@ For the first textbook set, the metadata inventory already contains:
 | `physics-oxford-2023` | Physics | Physics Course Companion, Fifth Edition |
 | `mathematics-aa-hl-higher-book` | Mathematics AA HL | Higher_book.pdf |
 
-## 2. Run local ingestion
+## 2. Ingest a textbook/source locally
 
-From the repository root, use the matching source ID and the local file you downloaded.
-
-Windows examples:
+Examples:
 
 ```powershell
 npx tsx scripts/ingest-source.ts --source-id chemistry-pearson-2025 --input "C:\Users\dimah\Downloads\HL_Chemistry_pearson_book_2025.pdf"
@@ -66,101 +50,52 @@ npx tsx scripts/ingest-source.ts --source-id physics-oxford-2023 --input "C:\Use
 npx tsx scripts/ingest-source.ts --source-id mathematics-aa-hl-higher-book --input "C:\Users\dimah\Downloads\Higher_book.pdf"
 ```
 
-A custom metadata inventory can be selected with:
+The pipeline copies the file into ignored immutable storage, computes SHA-256 provenance, extracts one-based pages, flags weak pages as `ocr_required`, creates page-aware chunks, classifies topics, and writes only ignored artifacts/reports.
 
-```powershell
-npx tsx scripts/ingest-source.ts --source-id my-source --input "C:\path\book.pdf" --inventory "C:\path\inventory.json"
+OCR-required pages are **not** silently treated as reliable text.
+
+## 3. Inspect before indexing
+
+Check:
+
+- plausible page count;
+- OCR-required count;
+- correct title/source ID;
+- several page numbers/headings;
+- absence of the PDF/extracted text from `git status`;
+- `npm run verify:private`.
+
+## 4. Dedicated Supabase setup
+
+Use a dedicated AI-for-IB project, not an unrelated project.
+
+Apply:
+
+```text
+supabase/migrations/20260913000000_private_study_foundation.sql
 ```
 
-## 3. What the command does
-
-For each local source, the pipeline:
-
-1. validates the source and destination paths;
-2. records a safe `materialization_started` manifest event;
-3. copies the file into `private-sources/<subject>/` without overwriting another file;
-4. computes a SHA-256 checksum;
-5. detects an already-known checksum and records a duplicate instead of replacing the original;
-6. extracts each PDF page with its original one-based page number;
-7. classifies unusable/selectable-text-poor pages as `ocr_required`;
-8. writes extracted page data under `private-index/extracted/`;
-9. builds page-aware semantic chunks only from pages with usable selectable text;
-10. classifies those chunks against the current IB topic taxonomy and writes them under `private-index/chunks/`;
-11. writes a safe ingestion report under `data/ingestion-reports/`;
-12. appends an `ingested` event with the real chunk count to the local manifest.
-
-The CLI prints only a safe summary: checksum, page count, chunk count, OCR-required page count, source ID and status.
-
-## OCR handling
-
-The current pipeline detects pages that need OCR but does **not** automatically run destructive OCR.
-
-That is intentional. A later OCR pass should preserve:
-
-- the original PDF;
-- original page numbers;
-- figures/equations;
-- extraction method;
-- confidence/quality state.
-
-A source with some OCR-required pages can still be inspected, but those pages should not be treated as reliable text until OCR has been completed.
-
-## Resume and duplicate behavior
-
-The manifest is append-only. Existing history is not rewritten.
-
-If the same exact file checksum has already been materialized, the pipeline records a duplicate and avoids silently replacing the first copy. If extraction fails, it records a safe failure stage/summary without persisting secrets or raw source text in the manifest.
-
-## 4. Private Supabase prerequisites
-
-Production retrieval expects:
+Server configuration:
 
 ```env
 SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-EMBEDDING_BASE_URL=http://localhost:8001/v1
-EMBEDDING_MODEL=BAAI/bge-m3
-EMBEDDING_API_KEY=
+SUPABASE_SECRET_KEY=
 ```
 
-Apply `supabase/migrations/20260913000000_private_study_foundation.sql` to the project's Supabase database before enabling production source retrieval.
+The legacy `SUPABASE_SERVICE_ROLE_KEY` is accepted as a fallback.
 
-The migration creates the private source schema, pgvector column/indexes, constrained search RPCs and learner-state tables.
-
-The service-role key is server-only. Never expose it through `NEXT_PUBLIC_*` variables or browser code.
-
-## 5. Inspect before indexing
-
-After each source:
-
-- confirm the page count is plausible;
-- review the OCR-required count;
-- verify the title/source ID match the actual file;
-- spot-check original page numbers and headings;
-- verify the file is absent from `git status`;
-- run `npm run verify:private`.
-
-Do not index a file with the wrong source ID or obviously broken page extraction.
-
-## Current scope
-
-The ingestion foundation handles local PDFs and prepares page-aware content for private retrieval. It does not automate provider logins/downloads, bypass access controls, or train the LLM on copyrighted textbook passages.
-
-The first practical goal is to ingest the three authorized textbooks above, then add selected private notes and past-paper material using the same boundary.
-
-
-## 6. Load an ingested source into private retrieval
-
-After local ingestion has produced `private-index/extracted/` and `private-index/chunks/`, the source can be loaded into the private Supabase schema through a service-role-only RPC.
-
-The browser never receives the service-role key. Keep these values in a private local/server environment:
+Browser auth configuration:
 
 ```env
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
 
-Embeddings are optional. For hybrid vector + lexical retrieval also configure:
+The secret/service-role key must never be placed in a `NEXT_PUBLIC_*` variable.
+
+## 5. Index an ingested source
+
+Optional embeddings:
 
 ```env
 EMBEDDING_BASE_URL=http://localhost:8001/v1
@@ -168,30 +103,56 @@ EMBEDDING_MODEL=BAAI/bge-m3
 EMBEDDING_API_KEY=
 ```
 
-The current database vector column is 1,024 dimensions. The index command rejects vectors with a different dimension instead of silently writing incompatible data.
-
-Index the latest locally ingested version:
+Index the latest ingested version:
 
 ```powershell
 npm run study:index -- --source-id physics-oxford-2023
 ```
 
-Force lexical-only indexing:
+Lexical-only:
 
 ```powershell
 npm run study:index -- --source-id physics-oxford-2023 --no-embeddings
 ```
 
-Select an exact immutable version when more than one checksum exists:
+Specific immutable checksum:
 
 ```powershell
 npm run study:index -- --source-id physics-oxford-2023 --checksum <sha256>
 ```
 
-The command reads ignored local artifacts, sends private chunk content only to the configured Supabase backend, and prints only safe counts/checksum metadata. A successful run appends an `indexed` event to the ignored local manifest.
+The 1,024-dimensional vector schema rejects embeddings with the wrong dimension.
 
-The private schema itself does not need to be exposed through the Data API. The migration provides `public.index_private_study_source(...)`, revokes it from public/anonymous/authenticated callers, and grants execution only to `service_role`.
+## 6. Index a real past paper
 
-### Current deployment status
+Use `npm run paper:index` with explicit normalized metadata and authorized local files. Do not rely on guessed filenames.
 
-The repository contains the database foundation and loader, but do not point it at an unrelated Supabase project. Create or select a dedicated AI-for-IB project first, then apply the foundation migration and configure its URL/service-role key privately.
+Example:
+
+```powershell
+npm run paper:index -- `
+  --question "C:\path\physics_m25_hl_tz2_p2.pdf" `
+  --markscheme "C:\path\physics_m25_hl_tz2_p2_ms.pdf" `
+  --subject physics `
+  --year 2025 `
+  --session may `
+  --timezone TZ2 `
+  --level HL `
+  --paper p2 `
+  --language English
+```
+
+Omit `--markscheme` when no authorized matching scheme is available; the questions stay `question_only`.
+
+See `docs/PAST_PAPERS.md` for conservative pairing and visual-question rules.
+
+## 7. Runtime access boundary
+
+The database source schema is private. Server-only RPC execution is revoked from `PUBLIC`, `anon` and `authenticated`, and granted to the server role.
+
+The browser never queries the private source database directly. After private retrieval is configured, `/api/chat` authenticates the Supabase user before source search begins. `/api/sources` exposes only a safe authenticated source inventory.
+
+## Current limitations
+
+- OCR-required pages need a separate future OCR pass.
+- Paper figures/graphs/diagrams are not yet extracted; visual-dependent questions are withheld from retrieval.

@@ -197,7 +197,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = private, public, extensions
+set search_path = pg_catalog, private, extensions
 as $$
   select
     chunk.id,
@@ -253,7 +253,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = private, public, extensions
+set search_path = pg_catalog, private, extensions
 as $$
   select
     chunk.id,
@@ -407,7 +407,7 @@ create or replace function public.index_private_study_source(
 returns jsonb
 language plpgsql
 security definer
-set search_path = private, public, extensions
+set search_path = pg_catalog, private, extensions
 as $$
 declare
   v_document_id uuid;
@@ -650,7 +650,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = private, public, extensions
+set search_path = pg_catalog, private, extensions
 as $$
   select
     question.id,
@@ -735,7 +735,7 @@ create or replace function public.record_private_learning_attempt(
 returns void
 language plpgsql
 security definer
-set search_path = private, public, auth
+set search_path = pg_catalog, private
 as $$
 declare
   v_subject text;
@@ -851,7 +851,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = private, public
+set search_path = pg_catalog, private
 as $
   select
     topic.subject,
@@ -914,7 +914,7 @@ create or replace function public.index_private_past_paper(
 returns jsonb
 language plpgsql
 security definer
-set search_path = private, public, extensions
+set search_path = pg_catalog, private, extensions
 as $$
 declare
   v_question_document_id uuid;
@@ -1262,7 +1262,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = private, public
+set search_path = pg_catalog, private
 as $$
   select
     document.source_id,
@@ -1300,3 +1300,57 @@ revoke all on function public.list_private_study_sources(text)
   from public, anon, authenticated;
 grant execute on function public.list_private_study_sources(text)
   to service_role;
+
+
+-- Final RPC privilege hardening.
+-- SECURITY DEFINER functions are callable by PUBLIC by default in PostgreSQL,
+-- so every private RPC is explicitly revoked from browser-facing roles.
+revoke all on function public.search_private_study_chunks(
+  text, text[], text, text[], integer
+) from public, anon, authenticated;
+revoke all on function public.search_private_study_chunks_vector(
+  text, text[], extensions.vector, text[], integer
+) from public, anon, authenticated;
+revoke all on function public.index_private_study_source(
+  jsonb, jsonb, jsonb, jsonb
+) from public, anon, authenticated;
+revoke all on function public.search_private_past_paper_questions(
+  text, text, integer[], text, text[], boolean, integer
+) from public, anon, authenticated;
+revoke all on function public.record_private_learning_attempt(
+  uuid, jsonb, jsonb
+) from public, anon, authenticated;
+revoke all on function public.get_private_learning_progress(
+  uuid, text
+) from public, anon, authenticated;
+revoke all on function public.index_private_past_paper(
+  jsonb, jsonb, jsonb, jsonb, jsonb
+) from public, anon, authenticated;
+revoke all on function public.list_private_study_sources(
+  text
+) from public, anon, authenticated;
+
+grant execute on function public.search_private_study_chunks(
+  text, text[], text, text[], integer
+) to service_role;
+grant execute on function public.search_private_study_chunks_vector(
+  text, text[], extensions.vector, text[], integer
+) to service_role;
+grant execute on function public.index_private_study_source(
+  jsonb, jsonb, jsonb, jsonb
+) to service_role;
+grant execute on function public.search_private_past_paper_questions(
+  text, text, integer[], text, text[], boolean, integer
+) to service_role;
+grant execute on function public.record_private_learning_attempt(
+  uuid, jsonb, jsonb
+) to service_role;
+grant execute on function public.get_private_learning_progress(
+  uuid, text
+) to service_role;
+grant execute on function public.index_private_past_paper(
+  jsonb, jsonb, jsonb, jsonb, jsonb
+) to service_role;
+grant execute on function public.list_private_study_sources(
+  text
+) to service_role;
