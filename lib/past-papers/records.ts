@@ -146,6 +146,7 @@ export function buildPastPaperQuestionRecords(args: {
     ? extractQuestionCandidates(
         args.markschemePages,
         args.markschemeDocument!.id,
+        { inheritParentContext: false },
       )
     : [];
 
