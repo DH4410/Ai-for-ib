@@ -2,7 +2,7 @@
 """QLoRA supervised fine-tuning entry point for Google Colab/GPU runners.
 
 The dataset is conversational prompt/completion JSONL validated by
-training/schema.ts. Keep real train/eval files outside the public repository.
+training/schema.ts. Keep real train/validation files outside the public repository.
 """
 
 from __future__ import annotations
@@ -20,8 +20,11 @@ from trl import SFTConfig, SFTTrainer
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-model", required=True, help="Hugging Face model id or local model path")
-    parser.add_argument("--train", required=True, help="Private training JSONL")
-    parser.add_argument("--eval", help="Optional private held-out evaluation JSONL")
+    parser.add_argument("--train", required=True, help="Private prompt/completion training JSONL")
+    parser.add_argument(
+        "--validation",
+        help="Optional private prompt/completion validation JSONL used only for SFT validation loss",
+    )
     parser.add_argument("--output-dir", required=True, help="Where to save the LoRA adapter")
     parser.add_argument("--epochs", type=float, default=2.0)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
@@ -60,12 +63,14 @@ def main() -> None:
     if not train_path.is_file():
         raise SystemExit(f"training file does not exist: {train_path}")
 
-    eval_dataset = None
-    if args.eval:
-        eval_path = Path(args.eval)
-        if not eval_path.is_file():
-            raise SystemExit(f"evaluation file does not exist: {eval_path}")
-        eval_dataset = load_jsonl(str(eval_path))
+    validation_dataset = None
+    if args.validation:
+        validation_path = Path(args.validation)
+        if not validation_path.is_file():
+            raise SystemExit(
+                f"validation file does not exist: {validation_path}"
+            )
+        validation_dataset = load_jsonl(str(validation_path))
 
     train_dataset = load_jsonl(str(train_path))
     compute_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
@@ -104,7 +109,7 @@ def main() -> None:
         completion_only_loss=True,
         packing=args.packing,
         gradient_checkpointing=True,
-        eval_strategy="epoch" if eval_dataset is not None else "no",
+        eval_strategy="epoch" if validation_dataset is not None else "no",
         save_strategy="epoch",
         save_total_limit=2,
         logging_steps=10,
@@ -120,7 +125,7 @@ def main() -> None:
         model=args.base_model,
         args=training_args,
         train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
+        validation_dataset=validation_dataset,
         processing_class=tokenizer,
         peft_config=peft_config,
         quantization_config=quantization_config,
