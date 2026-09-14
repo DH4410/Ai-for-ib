@@ -212,3 +212,10 @@ For a quick plumbing run:
 The runner unloads each model before loading the next and reports concept coverage, guardrail pass rate, average generation latency, and peak allocated CUDA memory. The combined mechanical score is only a screening metric; manually inspect correctness and pedagogy before selecting the base model.
 
 Gemma 3 4B remains a useful optional comparison, but its Hugging Face checkpoint requires accepting Google's Gemma terms and uses a multimodal model path, so it is intentionally not in this text-only default runner.
+
+
+## Qwen3 thinking mode
+
+Qwen3 chat templates enable thinking by default. The public candidate registry therefore sets `enableThinking: false` for the default Qwen3 tutoring benchmark. This prevents hidden/reasoning text from consuming the generation budget and keeps the first comparison focused on normal interactive tutoring latency and response quality.
+
+Do not interpret this as a claim that reasoning mode is worse. If the non-thinking benchmark selects Qwen3 as a strong candidate, run a separate reasoning-focused evaluation for difficult Mathematics/Physics problems before deciding whether the deployed tutor should expose a reasoning mode.

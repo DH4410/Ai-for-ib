@@ -7,7 +7,8 @@
       "license": "Apache-2.0",
       "enabledByDefault": true,
       "trustRemoteCode": false,
-      "notes": "Primary small-model candidate for Colab benchmarking."
+      "notes": "Primary small-model candidate for Colab benchmarking. Benchmarked in explicit non-thinking tutor mode; reasoning mode should be evaluated separately.",
+      "enableThinking": false
     },
     {
       "id": "Qwen/Qwen3-8B",
@@ -15,7 +16,8 @@
       "license": "Apache-2.0",
       "enabledByDefault": true,
       "trustRemoteCode": false,
-      "notes": "Larger quality candidate; benchmark only when the available GPU can hold 4-bit weights plus generation overhead."
+      "notes": "Larger quality candidate; benchmark only when the available GPU can hold 4-bit weights plus generation overhead. Benchmarked in explicit non-thinking tutor mode; reasoning mode should be evaluated separately.",
+      "enableThinking": false
     },
     {
       "id": "microsoft/Phi-4-mini-instruct",

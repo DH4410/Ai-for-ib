@@ -21,6 +21,7 @@ class Candidate:
     label: str
     license: str
     trust_remote_code: bool
+    enable_thinking: bool | None
 
 
 def parse_args() -> argparse.Namespace:
@@ -128,6 +129,11 @@ def load_candidates(
                 trust_remote_code=bool(
                     metadata.get("trustRemoteCode", False)
                 ),
+                enable_thinking=(
+                    bool(metadata["enableThinking"])
+                    if "enableThinking" in metadata
+                    else None
+                ),
             )
         )
 
@@ -223,17 +229,25 @@ def load_model(candidate: Candidate):
 
 
 def generate_case(
+    candidate: Candidate,
     model,
     tokenizer,
     case: dict[str, Any],
     max_new_tokens: int,
 ) -> tuple[str, float]:
+    template_kwargs: dict[str, Any] = {}
+    if candidate.enable_thinking is not None:
+        template_kwargs["enable_thinking"] = (
+            candidate.enable_thinking
+        )
+
     encoded = tokenizer.apply_chat_template(
         case["prompt"],
         add_generation_prompt=True,
         tokenize=True,
         return_dict=True,
         return_tensors="pt",
+        **template_kwargs,
     )
     encoded = {
         key: value.to(model.device)
@@ -277,6 +291,7 @@ def benchmark_candidate(
 
         for index, case in enumerate(cases, start=1):
             text, latency_seconds = generate_case(
+                candidate,
                 model,
                 tokenizer,
                 case,
@@ -330,6 +345,7 @@ def benchmark_candidate(
             "model": candidate.model_id,
             "label": candidate.label,
             "license": candidate.license,
+            "enableThinking": candidate.enable_thinking,
             "status": "completed",
             "summary": {
                 "averageConceptCoverage": concept_coverage,
@@ -345,6 +361,7 @@ def benchmark_candidate(
             "model": candidate.model_id,
             "label": candidate.label,
             "license": candidate.license,
+            "enableThinking": candidate.enable_thinking,
             "status": "failed",
             "error": f"{type(error).__name__}: {error}",
             "cases": results,
