@@ -47,30 +47,42 @@ Use one JSON object per line:
 
 The final prompt message must be from the learner and the completion must contain exactly one assistant message. This maps cleanly to conversational prompt/completion SFT, where training loss is applied to the completion.
 
-A tiny synthetic example is committed as `training/dataset.example.jsonl`. Real training and evaluation JSONL files are blocked by the repository privacy boundary.
+A 12-case synthetic behavior fixture is committed as `training/dataset.example.jsonl`. The separate rubric-based benchmark fixture is `training/benchmark.example.jsonl`. Real training, validation and benchmark files are blocked by the repository privacy boundary.
 
-## Validate before Colab
+## Private dataset roles and validation
 
-Keep the real file somewhere ignored, for example:
+Keep three different private files when they are needed:
 
 ```text
 training/private-data/train.jsonl
-training/private-data/eval.jsonl
+training/private-data/validation.jsonl
+training/private-data/benchmark.jsonl
 ```
 
-Then run:
+They have different jobs:
+
+- `train.jsonl`: prompt + completion behavior examples used for gradient updates.
+- `validation.jsonl`: optional prompt + completion examples in the **same SFT schema**, used only for validation loss/checkpoint monitoring. It is never the final quality benchmark.
+- `benchmark.jsonl`: prompt + rubric cases with **no completion**, held out from SFT and used to choose the base model and compare the tuned model.
+
+Validate them before Colab:
 
 ```bash
 npm run training:validate -- training/private-data/train.jsonl
-npm run training:validate -- training/private-data/eval.jsonl
-npm run training:audit-split -- training/private-data/train.jsonl training/private-data/eval.jsonl
+npm run training:validate -- training/private-data/validation.jsonl
+npm run training:validate-benchmark -- training/private-data/benchmark.jsonl
+npm run training:audit-split -- training/private-data/train.jsonl training/private-data/benchmark.jsonl
 npm run training:plan -- training/private-data/train.jsonl
 npm run verify:private
 ```
 
-The validator checks schema, roles, duplicate IDs and coverage metadata without uploading the file. The split audit understands the separate rubric-based evaluation schema and checks for reused IDs, exact learner-prompt duplication, high-overlap learner prompts, and missing Physics/Chemistry/Mathematics × Learn/Practice/Mark/Revise coverage cells. It prints IDs and counts, not private prompt text. The training planner estimates token volume, likely 2,048-token truncation, effective batch size and optimizer-step count before Colab.
+Skip the validation command if you are not using a separate SFT validation file. The training-schema validator checks prompt/completion structure, roles, duplicate IDs and metadata. The benchmark validator checks the rubric-based held-out schema and coverage. The split audit checks train-vs-benchmark ID/prompt leakage and subject×mode coverage without printing private prompt text. The training planner estimates token volume, likely 2,048-token truncation, effective batch size and optimizer-step count.
+
+Never pass `benchmark.jsonl` to `colab_train.py`; it deliberately has no reference completion.
 
 ## Google Colab workflow
+
+A guided notebook is included at `training/AI_for_IB_Colab.ipynb`. It runs the GPU preflight, public smoke benchmark, Drive setup, private benchmark, QLoRA and adapter smoke test in the correct order.
 
 ### 1. Start a GPU runtime
 
@@ -101,7 +113,7 @@ from google.colab import drive
 drive.mount("/content/drive")
 ```
 
-Put `train.jsonl` and `eval.jsonl` in your own Drive, not in the Git repository.
+Put `train.jsonl`, optional `validation.jsonl`, and `benchmark.jsonl` in your own Drive, not in the Git repository.
 
 ### 4. Run QLoRA
 
@@ -109,7 +121,7 @@ Put `train.jsonl` and `eval.jsonl` in your own Drive, not in the Git repository.
 !python training/colab_train.py \
   --base-model "<hugging-face-model-id>" \
   --train "/content/drive/MyDrive/ai-for-ib/private/train.jsonl" \
-  --eval "/content/drive/MyDrive/ai-for-ib/private/eval.jsonl" \
+  --validation "/content/drive/MyDrive/ai-for-ib/private/validation.jsonl" \
   --output-dir "/content/drive/MyDrive/ai-for-ib/checkpoints/Dima-IB-Tutor-v1" \
   --epochs 2 \
   --learning-rate 1e-4 \
@@ -128,7 +140,7 @@ If a chosen model requires a Hugging Face token, enter it using Colab's secret/e
 
 Do not judge the model on training loss alone.
 
-Keep a held-out evaluation set that contains concepts and wording not duplicated from the training file. Measure at least:
+Keep a held-out rubric-based benchmark that contains concepts and wording not duplicated from the training file. Measure at least:
 
 - correctness;
 - IB-level relevance;
@@ -147,9 +159,9 @@ The repository has a stable model API boundary, so the best approach is to bench
 
 ## Base vs fine-tuned evaluation
 
-Training loss does not tell us whether the tutor became better. Use a private evaluation JSONL and compare the unmodified base model with the candidate model through the same OpenAI-compatible API.
+Training/validation loss does not tell us whether the tutor became better. Use the private rubric-based `benchmark.jsonl` and compare the unmodified base model with the candidate model through the same OpenAI-compatible API.
 
-A tiny synthetic schema example is committed as `training/eval.example.jsonl`. Real evaluation files are private and blocked from Git.
+A 12-case synthetic schema example is committed as `training/benchmark.example.jsonl`. Real benchmark files are private and blocked from Git.
 
 Each case defines:
 
@@ -176,7 +188,7 @@ API keys, when needed, use `EVAL_BASE_API_KEY` and `EVAL_CANDIDATE_API_KEY`.
 Then run:
 
 ```bash
-npm run training:evaluate -- training/private-data/eval.jsonl training/outputs/model-comparison.json
+npm run training:evaluate -- training/private-data/benchmark.jsonl training/outputs/model-comparison.json
 ```
 
 The report is forced under `training/outputs/`, which is private/ignored. It stores both responses, latency, concept coverage, word-limit checks and guardrail results. Do not publish the report if the evaluation prompts contain private study material.
@@ -184,7 +196,7 @@ The report is forced under `training/outputs/`, which is private/ignored. It sto
 
 ## Benchmark the base model before fine-tuning
 
-Do not choose the training base model by reputation alone. The repo includes `training/benchmark_models.py`, which sequentially loads small candidate models in 4-bit NF4 and runs the same private IB evaluation set against each one.
+Do not choose the training base model by reputation alone. The repo includes `training/benchmark_models.py`, which sequentially loads small candidate models in 4-bit NF4 and runs the same private held-out IB benchmark against each one.
 
 The current public candidate registry is `training/model-candidates.json`:
 
@@ -198,7 +210,7 @@ In Colab:
 
 ```bash
 !python training/benchmark_models.py \
-  --eval "/content/drive/MyDrive/ai-for-ib/private/eval.jsonl" \
+  --benchmark "/content/drive/MyDrive/ai-for-ib/private/benchmark.jsonl" \
   --output "training/outputs/base-model-benchmark.json"
 ```
 
@@ -206,7 +218,7 @@ For a quick plumbing run:
 
 ```bash
 !python training/benchmark_models.py \
-  --eval "/content/drive/MyDrive/ai-for-ib/private/eval.jsonl" \
+  --benchmark "/content/drive/MyDrive/ai-for-ib/private/benchmark.jsonl" \
   --max-cases 3 \
   --models "Qwen/Qwen3-4B"
 ```
@@ -262,8 +274,8 @@ These are **starting coverage targets**, not magic minimums and not a reason to 
 
 - Training: about **100 strong examples per core subject × mode cell**.
   - 3 subjects × 4 modes × 100 ≈ **1,200 behavior examples**.
-- Held-out evaluation: about **10 cases per core subject × mode cell**.
-  - 3 subjects × 4 modes × 10 ≈ **120 evaluation cases**.
+- Held-out benchmark: about **10 rubric cases per core subject × mode cell**.
+  - 3 subjects × 4 modes × 10 ≈ **120 benchmark cases**.
 
 The split audit reports shortfalls against these targets but does not fail because of them. Leakage still fails the audit.
 
