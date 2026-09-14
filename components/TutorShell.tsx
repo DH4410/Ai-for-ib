@@ -333,7 +333,12 @@ export function TutorShell() {
                     : "mode"
                 }
                 key={option.id}
-                onClick={() => setMode(option.id)}
+                onClick={() => {
+                  if (option.id !== "mark") {
+                    setSelectedMarkSource(null);
+                  }
+                  setMode(option.id);
+                }}
                 type="button"
               >
                 {option.label}
@@ -597,6 +602,20 @@ export function TutorShell() {
                               ? ` · ${source.marks} marks`
                               : ""}
                           </span>
+                          {source.documentType ===
+                          "question-paper" ? (
+                            <em
+                              className={
+                                source.pairingStatus === "paired"
+                                  ? "paperStatus paired"
+                                  : "paperStatus"
+                              }
+                            >
+                              {source.pairingStatus === "paired"
+                                ? "Official scheme"
+                                : "Question only"}
+                            </em>
+                          ) : null}
                           {turn.mode === "practice" &&
                           source.documentType ===
                             "question-paper" ? (

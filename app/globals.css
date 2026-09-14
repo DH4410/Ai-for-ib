@@ -1179,3 +1179,20 @@ button {
     padding-inline: 16px;
   }
 }
+
+
+.paperStatus {
+  border: 1px solid #38414c;
+  border-radius: 999px;
+  color: #788695;
+  font-size: 8px;
+  font-style: normal;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+.paperStatus.paired {
+  border-color: #355747;
+  background: rgb(70 123 92 / 10%);
+  color: #8db39d;
+}
