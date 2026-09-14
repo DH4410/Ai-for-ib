@@ -33,7 +33,7 @@ type CaseReport = {
 function usage(): string {
   return [
     "Usage:",
-    "  npm run training:evaluate -- <private-eval-jsonl> [training/outputs/report.json]",
+    "  npm run training:evaluate -- <private-benchmark-jsonl> [training/outputs/report.json]",
     "",
     "Required environment variables:",
     "  EVAL_BASE_URL, EVAL_BASE_MODEL",
@@ -73,7 +73,7 @@ function assertPrivateOutputPath(outputPath: string): string {
     fromRoot.startsWith("..") ||
     fromRoot.includes(":")
   ) {
-    throw new Error("evaluation output must be a file under training/outputs/");
+    throw new Error("comparison output must be a file under training/outputs/");
   }
 
   return resolvedOutput;
@@ -146,10 +146,10 @@ function aggregate(
 }
 
 async function main(): Promise<void> {
-  const datasetPath = process.argv[2];
-  if (!datasetPath || datasetPath === "--help") {
+  const benchmarkPath = process.argv[2];
+  if (!benchmarkPath || benchmarkPath === "--help") {
     console.log(usage());
-    if (!datasetPath) {
+    if (!benchmarkPath) {
       process.exitCode = 1;
     }
     return;
@@ -158,7 +158,7 @@ async function main(): Promise<void> {
   const outputPath = assertPrivateOutputPath(
     process.argv[3] ?? "training/outputs/model-comparison.json",
   );
-  const contents = await readFile(resolve(process.cwd(), datasetPath), "utf8");
+  const contents = await readFile(resolve(process.cwd(), benchmarkPath), "utf8");
   const cases = parseEvaluationJsonl(contents);
   const baseline = modelConfig("baseline");
   const candidate = modelConfig("candidate");
@@ -183,7 +183,7 @@ async function main(): Promise<void> {
 
   const report = {
     generatedAt: new Date().toISOString(),
-    datasetFile: basename(datasetPath),
+    datasetFile: basename(benchmarkPath),
     note:
       "Mechanical metrics are deterministic comparison aids, not a substitute for human correctness and pedagogy review.",
     summary: {
@@ -200,6 +200,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : "model evaluation failed");
+  console.error(error instanceof Error ? error.message : "model comparison failed");
   process.exitCode = 1;
 });
