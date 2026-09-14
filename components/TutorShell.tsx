@@ -64,8 +64,8 @@ const paperYears = Array.from(
 
 type VisibleTurn = ChatTurn & {
   sources?: TutorResponse["sources"];
-  mode?: StudyMode;
-  subject?: Subject;
+  mode: StudyMode;
+  subject: Subject;
 };
 
 function progressSource(
@@ -117,6 +117,9 @@ export function TutorShell() {
   const focusedTopic = subjectTopics.find(
     (topic) => topic.id === focusedTopicId,
   );
+  const subjectTurns = turns.filter(
+    (turn) => turn.subject === subject,
+  );
 
   const placeholder = useMemo(() => {
     if (mode === "mark") {
@@ -143,10 +146,12 @@ export function TutorShell() {
       return;
     }
 
-    const history: ChatTurn[] = turns.map(({ role, content }) => ({
-      role,
-      content,
-    }));
+    const history: ChatTurn[] = subjectTurns.map(
+      ({ role, content }) => ({
+        role,
+        content,
+      }),
+    );
     const filters = {
       explanationLevel,
       ...(focusedTopicId
@@ -176,7 +181,12 @@ export function TutorShell() {
 
     setTurns((current) => [
       ...current,
-      { role: "user", content: message },
+      {
+        role: "user",
+        content: message,
+        mode,
+        subject,
+      },
     ]);
     setInput("");
     setLoading(true);
@@ -238,6 +248,8 @@ export function TutorShell() {
             (error instanceof Error
               ? error.message
               : "Unknown error."),
+          mode,
+          subject,
         },
       ]);
     } finally {
@@ -492,7 +504,7 @@ export function TutorShell() {
         ) : null}
 
         <div className="conversation">
-          {turns.length === 0 ? (
+          {subjectTurns.length === 0 ? (
             <div className="emptyState">
               <span className="eyebrow">
                 Standalone IB tutor
@@ -534,7 +546,7 @@ export function TutorShell() {
             </div>
           ) : (
             <div className="turnList">
-              {turns.map((turn, index) => (
+              {subjectTurns.map((turn, index) => (
                 <article
                   className={`turn ${turn.role}`}
                   key={index}
