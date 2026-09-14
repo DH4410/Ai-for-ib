@@ -65,7 +65,15 @@ They have different jobs:
 - `validation.jsonl`: optional prompt + completion examples in the **same SFT schema**, used only for validation loss/checkpoint monitoring. It is never the final quality benchmark.
 - `benchmark.jsonl`: prompt + rubric cases with **no completion**, held out from SFT and used to choose the base model and compare the tuned model.
 
-Validate them before Colab:
+If you start from one curated prompt/completion file such as `all-behavior.jsonl`, create the SFT train/validation files deterministically:
+
+```bash
+npm run training:split-sft -- training/private-data/all-behavior.jsonl --validation-ratio 0.1
+```
+
+The splitter is stratified by subject × mode, never moves the only example out of a cell, and writes only to the ignored `training/private-data/` directory.
+
+Validate the resulting files before Colab:
 
 ```bash
 npm run training:validate -- training/private-data/train.jsonl
