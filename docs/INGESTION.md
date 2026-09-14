@@ -156,3 +156,21 @@ The browser never queries the private source database directly. After private re
 
 - OCR-required pages need a separate future OCR pass.
 - Paper figures/graphs/diagrams are not yet extracted; visual-dependent questions are withheld from retrieval.
+
+
+## ManageBac MCP handoff
+
+For textbooks/resources already available through the student's authorized ManageBac account, the companion `DH4410/managebac-mcp` repository can discover and download class files through the saved authenticated browser session.
+
+It deliberately does **not** pass ManageBac cookies/passwords into AI-for-IB. The boundary is a local file path:
+
+```text
+ManageBac session
+  -> managebac_get_class_files
+  -> opaque resourceId
+  -> managebac_download_file
+  -> .managebac/downloads/<sha>--<filename>
+  -> AI-for-IB ingest-source.ts --input <localPath>
+```
+
+See `docs/MANAGEBAC_IMPORT.md`.

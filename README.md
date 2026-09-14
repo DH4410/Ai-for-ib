@@ -19,6 +19,7 @@ AI for IB is a private, standalone tutor for **IB Physics, Chemistry and Mathema
 - Saved mastery/mistakes personalize future tutor prompts without overriding source evidence or official marking criteria.
 - Private PDF materialization, checksums, page-aware extraction, OCR-required detection, chunking and topic classification.
 - One-command private textbook indexing and one-command authorized local past-paper indexing.
+- A **ManageBac resource bridge** through the companion `DH4410/managebac-mcp` server: discover class files, download a previously discovered resource into ignored local storage, then hand only the local path to AI-for-IB ingestion.
 - Colab-ready QLoRA training, base-vs-candidate evaluation, and a sequential 4-bit benchmark for Qwen3-4B, Qwen3-8B and Phi-4-mini-instruct.
 - CI for the private-data boundary, tests, TypeScript, Python syntax and production build.
 
@@ -123,3 +124,17 @@ See `docs/INGESTION.md`, `docs/PAST_PAPERS.md` and `training/README.md` for the 
 ## What still requires real private inputs/infrastructure
 
 The code path is built, but the repository intentionally does not contain the user's licensed PDFs, real past-paper text, private training/evaluation datasets, Supabase credentials, or model weights. To make the tutor fully useful, those must be supplied through the authorized private workflows and the selected model must be benchmarked/deployed.
+
+
+## ManageBac class-file handoff
+
+The companion `DH4410/managebac-mcp` server now exposes:
+
+```text
+managebac_get_class_files
+managebac_download_file
+```
+
+The download tool accepts only an opaque resource ID returned by the class-file listing in the same MCP session. It does not accept arbitrary URLs and stores files only under the MCP repo's ignored `.managebac/downloads/` directory.
+
+See `docs/MANAGEBAC_IMPORT.md` for the end-to-end private handoff into this repository.
