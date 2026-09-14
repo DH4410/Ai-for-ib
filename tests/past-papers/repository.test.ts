@@ -105,7 +105,9 @@ describe("past-paper index repository", () => {
           timezone: "TZ2",
           topicClassificationMethod: "unclassified",
           topicConfidence: 0,
-          topicIds: [],
+          topicIds: [
+            "physics.b.particulate-matter.specific-latent-heat",
+          ],
           year: 2025,
         },
       ],
@@ -114,6 +116,17 @@ describe("past-paper index repository", () => {
     expect(called?.name).toBe(
       "index_private_past_paper",
     );
+    expect(
+      (
+        called?.parameters.p_questions as Array<
+          Record<string, unknown>
+        >
+      )[0]?.topic_ids,
+    ).toEqual([
+      "physics.b.particulate-matter.specific-latent-heat",
+      "physics.b.thermal-energy-transfers",
+      "physics.b.particulate-matter",
+    ]);
     expect(result).toEqual({
       markschemeDocumentId: "ms-uuid",
       pairedQuestionCount: 1,

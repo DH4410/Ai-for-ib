@@ -6,6 +6,7 @@ import type {
 } from "@/lib/ingestion/types";
 import type { SourceDocument } from "@/lib/study-source/types";
 import type { TopicClassificationMethod } from "@/lib/taxonomy/classify";
+import { expandIBDPTopicIds } from "@/lib/taxonomy/ibdp";
 
 export const STUDY_EMBEDDING_DIMENSION = 1024;
 
@@ -116,7 +117,7 @@ export class SupabasePrivateStudyIndexRepository {
         subject: chunk.subject,
         title: chunk.title,
         topic_confidence: chunk.topicConfidence,
-        topic_ids: chunk.topicIds,
+        topic_ids: expandIBDPTopicIds(chunk.topicIds),
       })),
       p_document: {
         author: request.source.author,

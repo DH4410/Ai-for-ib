@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { classifyTopics } from "@/lib/taxonomy/classify";
-import { findIBDPTopic } from "@/lib/taxonomy/ibdp";
+import {
+  expandIBDPTopicIds,
+  findIBDPTopic,
+} from "@/lib/taxonomy/ibdp";
 
 describe("IBDP topic classification", () => {
   it("maps a specific-latent-heat heading to its Physics B.1 child topic", () => {
@@ -76,5 +79,17 @@ describe("IBDP topic classification", () => {
         "No trusted metadata, heading rule, or keyword rule matched.",
       topicIds: [],
     });
+  });
+
+  it("expands a specific topic to trusted syllabus ancestors for indexing", () => {
+    expect(
+      expandIBDPTopicIds([
+        "physics.b.particulate-matter.specific-latent-heat",
+      ]),
+    ).toEqual([
+      "physics.b.particulate-matter.specific-latent-heat",
+      "physics.b.thermal-energy-transfers",
+      "physics.b.particulate-matter",
+    ]);
   });
 });

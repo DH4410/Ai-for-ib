@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PastPaperDocument } from "@/lib/past-papers/metadata";
 import type { StructuredPastPaperQuestion } from "@/lib/past-papers/records";
 import type { SourceDocument } from "@/lib/study-source/types";
+import { expandIBDPTopicIds } from "@/lib/taxonomy/ibdp";
 
 export type PastPaperVersionMetadata = {
   acquiredAt: string;
@@ -176,7 +177,9 @@ export class SupabasePastPaperIndexRepository {
           topic_classification_method:
             question.topicClassificationMethod,
           topic_confidence: question.topicConfidence,
-          topic_ids: question.topicIds,
+          topic_ids: expandIBDPTopicIds(
+            question.topicIds,
+          ),
           year: question.year,
           level: question.level,
         })),

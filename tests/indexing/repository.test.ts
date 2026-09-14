@@ -87,6 +87,17 @@ describe("private study indexing repository", () => {
     expect(
       (call?.parameters.p_pages as Array<Record<string, unknown>>)[0],
     ).not.toHaveProperty("text");
+    expect(
+      (
+        call?.parameters.p_chunks as Array<
+          Record<string, unknown>
+        >
+      )[0]?.topic_ids,
+    ).toEqual([
+      "physics.b.particulate-matter.specific-latent-heat",
+      "physics.b.thermal-energy-transfers",
+      "physics.b.particulate-matter",
+    ]);
     expect(result).toEqual({
       chunkCount: 1,
       documentId: "document-uuid",

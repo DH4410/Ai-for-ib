@@ -512,3 +512,34 @@ export function findIBDPTopic(
 ): IBDPTopic | undefined {
   return IBDP_TOPICS.find(({ id }) => id === topicId);
 }
+
+
+export function topicIdWithAncestors(
+  topicId: string,
+): string[] {
+  const result: string[] = [];
+  const visited = new Set<string>();
+  let current = findIBDPTopic(topicId);
+
+  while (current && !visited.has(current.id)) {
+    result.push(current.id);
+    visited.add(current.id);
+    current = current.parentId
+      ? findIBDPTopic(current.parentId)
+      : undefined;
+  }
+
+  return result;
+}
+
+export function expandIBDPTopicIds(
+  topicIds: string[],
+): string[] {
+  return [
+    ...new Set(
+      topicIds.flatMap((topicId) =>
+        topicIdWithAncestors(topicId),
+      ),
+    ),
+  ];
+}
