@@ -116,6 +116,63 @@ describe("past-paper question candidates", () => {
     expect(romanTwo?.marks).toBe(2);
   });
 
+  it("does not prepend an independent top-level command to later letter parts", () => {
+    const candidates = extractQuestionCandidates(
+      [
+        {
+          pageNumber: 4,
+          text: [
+            "1. State one property of the sample.",
+            "(a) Explain the result. [2]",
+          ].join("\n"),
+        },
+      ],
+      "physics-m25-p2",
+    );
+
+    expect(
+      candidates.find(
+        ({ subquestion }) => subquestion === "a",
+      )?.text,
+    ).toBe("Explain the result. [2]");
+  });
+
+  it("parses compact markscheme-table identifiers", () => {
+    const candidates = extractQuestionCandidates(
+      [
+        {
+          pageNumber: 10,
+          text: [
+            "1 a i Award one mark for conservation of energy. [1]",
+            "1 a ii Accept 4200 J with working. [2]",
+          ].join("\n"),
+        },
+      ],
+      "physics-m25-p2-ms",
+    );
+
+    expect(
+      candidates.map(
+        ({ subquestion, marks, text }) => ({
+          marks,
+          subquestion,
+          text,
+        }),
+      ),
+    ).toEqual([
+      {
+        marks: 1,
+        subquestion: "a.i",
+        text: "Award one mark for conservation of energy. [1]",
+      },
+      {
+        marks: 2,
+        subquestion: "a.ii",
+        text: "Accept 4200 J with working. [2]",
+      },
+    ]);
+  });
+
   it("parses a combined question-number and letter marker", () => {
     const candidates = extractQuestionCandidates(
       [

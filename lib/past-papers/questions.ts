@@ -29,6 +29,8 @@ type MatchState = {
 };
 
 const ROMAN_PART = /^(?:i|ii|iii|iv|v|vi|vii|viii|ix|x)$/;
+const COMMAND_PREFIX =
+  /^(?:calculate|compare|construct|deduce|define|derive|describe|determine|distinguish|draw|estimate|evaluate|explain|identify|justify|outline|predict|show|sketch|state|suggest)\b/i;
 
 function extractVisibleMarks(
   text: string,
@@ -78,6 +80,39 @@ function matchQuestion(
   line: string,
   state: MatchState,
 ): QuestionMatch | undefined {
+  const numberedRoman = line.match(
+    /^(\d+)[.)]?\s+\(?([a-z])\)?[.)]?\s+\(?((?:i|ii|iii|iv|v|vi|vii|viii|ix|x))\)?[.)]?\s+(.*)$/i,
+  );
+  if (numberedRoman) {
+    const letterPart =
+      numberedRoman[2].toLocaleLowerCase();
+    const romanPart =
+      numberedRoman[3].toLocaleLowerCase();
+    return {
+      letterPart,
+      level: "roman",
+      questionNumber: numberedRoman[1],
+      romanPart,
+      subquestion: `${letterPart}.${romanPart}`,
+      text: numberedRoman[4],
+    };
+  }
+
+  const numberedLetter = line.match(
+    /^(\d+)[.)]?\s+\(?([a-z])\)?[.)]?\s+(.*)$/i,
+  );
+  if (numberedLetter) {
+    const letterPart =
+      numberedLetter[2].toLocaleLowerCase();
+    return {
+      letterPart,
+      level: "letter",
+      questionNumber: numberedLetter[1],
+      subquestion: letterPart,
+      text: numberedLetter[3],
+    };
+  }
+
   const combined = line.match(
     /^(\d+)[.)]\s*\(([a-z])\)\s*(.*)$/i,
   );
@@ -160,6 +195,18 @@ function candidateId(
   return `${documentId}-q${questionNumber}${subquestion ?? ""}`;
 }
 
+function inheritedContext(
+  candidate: QuestionCandidate | undefined,
+): string | undefined {
+  const text = candidate?.text.trim();
+
+  if (!text || COMMAND_PREFIX.test(text)) {
+    return undefined;
+  }
+
+  return text;
+}
+
 function withContext(
   context: string | undefined,
   text: string,
@@ -233,13 +280,16 @@ export function extractQuestionCandidates(
           match.questionNumber
         ) {
           contextualText = withContext(
-            activeTopCandidate.text,
+            inheritedContext(activeTopCandidate),
             match.text,
           );
         }
         activeLetterPart = match.letterPart;
         activeRomanPart = undefined;
       } else if (match.level === "roman") {
+        if (match.letterPart) {
+          activeLetterPart = match.letterPart;
+        }
         if (
           activeLetterCandidate?.questionNumber ===
           match.questionNumber &&
@@ -247,7 +297,7 @@ export function extractQuestionCandidates(
             match.letterPart
         ) {
           contextualText = withContext(
-            activeLetterCandidate.text,
+            inheritedContext(activeLetterCandidate),
             match.text,
           );
         } else if (
@@ -255,7 +305,7 @@ export function extractQuestionCandidates(
           match.questionNumber
         ) {
           contextualText = withContext(
-            activeTopCandidate.text,
+            inheritedContext(activeTopCandidate),
             match.text,
           );
         }
