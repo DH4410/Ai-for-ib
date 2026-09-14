@@ -42,11 +42,19 @@ async function main(): Promise<void> {
   ) as Record<string, number>;
 
   let conceptGroups = 0;
+  let taggedWithTopics = 0;
+  const uniqueTopicIds = new Set<string>();
   for (const benchmarkCase of cases) {
     bySubject[benchmarkCase.subject] += 1;
     byMode[benchmarkCase.mode] += 1;
     conceptGroups +=
       benchmarkCase.rubric.requiredConceptGroups.length;
+    if ((benchmarkCase.topicIds?.length ?? 0) > 0) {
+      taggedWithTopics += 1;
+      benchmarkCase.topicIds?.forEach((topicId) =>
+        uniqueTopicIds.add(topicId),
+      );
+    }
   }
 
   console.log(
@@ -56,6 +64,9 @@ async function main(): Promise<void> {
         bySubject,
         byMode,
         requiredConceptGroups: conceptGroups,
+        taggedWithTopics,
+        untaggedCases: cases.length - taggedWithTopics,
+        uniqueTopicIds: [...uniqueTopicIds].sort(),
       },
       null,
       2,
