@@ -86,6 +86,8 @@ export function TutorShell() {
   const [realPastPapers, setRealPastPapers] = useState(false);
   const [paperFilter, setPaperFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
+  const [realQuestionCount, setRealQuestionCount] =
+    useState<1 | 3 | 5>(1);
   const [explanationLevel, setExplanationLevel] =
     useState<"simple" | "standard" | "full">("standard");
   const [hintsFirst, setHintsFirst] = useState(true);
@@ -169,6 +171,7 @@ export function TutorShell() {
               ? {
                   documentTypes: ["question-paper"],
                   paper: paperFilter || undefined,
+                  questionCount: realQuestionCount,
                   realPastPapersOnly: true,
                   years: yearFilter
                     ? [Number(yearFilter)]
@@ -491,8 +494,28 @@ export function TutorShell() {
                   </select>
                 </label>
 
+                <label>
+                  <span>Questions</span>
+                  <select
+                    aria-label="Number of real past-paper questions"
+                    onChange={(event) =>
+                      setRealQuestionCount(
+                        Number(event.target.value) as
+                          | 1
+                          | 3
+                          | 5,
+                      )
+                    }
+                    value={realQuestionCount}
+                  >
+                    <option value={1}>1</option>
+                    <option value={3}>3</option>
+                    <option value={5}>5</option>
+                  </select>
+                </label>
+
                 <span className="verifiedSourceNote">
-                  Indexed real questions only
+                  Exact indexed wording
                 </span>
               </div>
             ) : (

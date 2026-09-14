@@ -17,6 +17,7 @@ import {
   SupabaseLearningProgressRepository,
 } from "@/lib/learning/repository";
 import { generateTutorAnswer } from "@/lib/model";
+import { formatRealPastPaperPractice } from "@/lib/past-papers/practice";
 import { buildSystemPrompt } from "@/lib/prompt";
 import {
   formatRetrievedContext,
@@ -80,7 +81,11 @@ export function createChatPostHandler(
       const sources =
         await dependencies.retrieveStudyContext({
           filters: parsedRequest.filters,
-          limit: 8,
+          limit:
+            parsedRequest.filters?.realPastPapersOnly === true &&
+            parsedRequest.mode === "practice"
+              ? parsedRequest.filters?.questionCount ?? 1
+              : 8,
           mode: parsedRequest.mode,
           query: parsedRequest.message,
           subject: parsedRequest.subject,
@@ -109,6 +114,19 @@ export function createChatPostHandler(
             "I don't have a matching indexed real past-paper question for those filters yet. I won't invent one and label it as an IB past-paper question. Try a different year/paper filter, or add the relevant authorized paper to the private index.",
           model: "retrieval-only",
           sources: [],
+        };
+
+        return NextResponse.json(response);
+      }
+
+      if (
+        parsedRequest.mode === "practice" &&
+        parsedRequest.filters?.realPastPapersOnly === true
+      ) {
+        const response: TutorResponse = {
+          answer: formatRealPastPaperPractice(sources),
+          model: "retrieval-only",
+          sources: sources.map(toSourceCitation),
         };
 
         return NextResponse.json(response);

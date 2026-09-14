@@ -23,6 +23,7 @@ export type ChatRequestFilters = {
   hintsFirst?: boolean;
   paper?: string;
   pastPaperQuestionId?: string;
+  questionCount?: number;
   realPastPapersOnly?: boolean;
   topicIds?: string[];
   years?: number[];
@@ -88,6 +89,17 @@ function parseFilters(value: unknown): ChatRequestFilters | undefined {
       return invalid("filters.paper must be one of p1a, p1b, p1, p2, or p3");
     }
     filters.paper = value.paper.toLocaleLowerCase();
+  }
+  if (value.questionCount !== undefined) {
+    if (
+      !Number.isSafeInteger(value.questionCount) ||
+      ![1, 3, 5].includes(value.questionCount as number)
+    ) {
+      return invalid(
+        "filters.questionCount must be 1, 3, or 5",
+      );
+    }
+    filters.questionCount = value.questionCount as number;
   }
   if (value.pastPaperQuestionId !== undefined) {
     if (

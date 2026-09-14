@@ -251,4 +251,64 @@ describe("chat API route", () => {
       "exact past-paper question",
     );
   });
+
+  it("serves strict real-paper practice directly without model paraphrasing", async () => {
+    const generateTutorAnswer = vi.fn(async () => ({
+      model: "should-not-run",
+      text: "Paraphrased question",
+    }));
+    const retrieveStudyContext = vi.fn(async () => [
+      {
+        documentType: "question-paper",
+        id: "physics-m25-p2-q4",
+        locator: "May 2025 · HL · P2 · Q4",
+        marks: 2,
+        pairingStatus: "paired" as const,
+        paper: "p2",
+        questionNumber: "4",
+        subject: "physics" as const,
+        text: "Question:\nCalculate the value. [2]",
+        title: "Physics May 2025 HL Paper 2",
+        topicIds: ["physics.b.thermal-energy-transfers"],
+        year: 2025,
+      },
+    ]);
+    const handler = createChatPostHandler({
+      generateTutorAnswer,
+      retrieveStudyContext,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/chat", {
+        body: JSON.stringify({
+          filters: {
+            questionCount: 1,
+            realPastPapersOnly: true,
+          },
+          message: "Give me a real question",
+          mode: "practice",
+          subject: "physics",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
+    const body = (await response.json()) as {
+      answer: string;
+      model: string;
+      sources: unknown[];
+    };
+
+    expect(response.status).toBe(200);
+    expect(generateTutorAnswer).not.toHaveBeenCalled();
+    expect(body.model).toBe("retrieval-only");
+    expect(body.answer).toBe(
+      "May 2025 · HL · P2 · Q4\n\nCalculate the value. [2]",
+    );
+    expect(retrieveStudyContext).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 1 }),
+    );
+  });
 });
