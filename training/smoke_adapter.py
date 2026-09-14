@@ -41,6 +41,11 @@ def parse_args() -> argparse.Namespace:
         "--candidate-registry",
         default="training/model-candidates.json",
     )
+    parser.add_argument(
+        "--trust-remote-code",
+        action="store_true",
+        help="Allow model repository custom code when the selected candidate requires it.",
+    )
     return parser.parse_args()
 
 
@@ -95,7 +100,8 @@ def main() -> None:
     )
 
     tokenizer = AutoTokenizer.from_pretrained(
-        args.base_model
+        args.base_model,
+        trust_remote_code=args.trust_remote_code,
     )
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -105,6 +111,7 @@ def main() -> None:
         device_map="auto",
         quantization_config=quantization,
         torch_dtype=compute_dtype,
+        trust_remote_code=args.trust_remote_code,
     )
     model = PeftModel.from_pretrained(
         base,
