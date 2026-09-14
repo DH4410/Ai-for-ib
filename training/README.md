@@ -208,7 +208,8 @@ Do not choose the training base model by reputation alone. The repo includes `tr
 
 The current public candidate registry is `training/model-candidates.json`:
 
-- `Qwen/Qwen3-4B` — Apache-2.0;
+- `Qwen/Qwen3-4B-Instruct-2507` — Apache-2.0, primary small text-only candidate;
+- `Qwen/Qwen3-4B` — Apache-2.0, retained as a non-default older hybrid reference;
 - `Qwen/Qwen3-8B` — Apache-2.0;
 - `microsoft/Phi-4-mini-instruct` — MIT.
 
@@ -228,7 +229,7 @@ For a quick plumbing run:
 !python training/benchmark_models.py \
   --benchmark "/content/drive/MyDrive/ai-for-ib/private/benchmark.jsonl" \
   --max-cases 3 \
-  --models "Qwen/Qwen3-4B"
+  --models "Qwen/Qwen3-4B-Instruct-2507"
 ```
 
 The runner unloads each model before loading the next and reports concept coverage, guardrail pass rate, average generation latency, and peak allocated CUDA memory. The combined mechanical score is only a screening metric; manually inspect correctness and pedagogy before selecting the base model.
@@ -238,7 +239,7 @@ Gemma 3 4B remains a useful optional comparison, but its Hugging Face checkpoint
 
 ## Qwen3 thinking mode
 
-Qwen3 chat templates enable thinking by default. The public candidate registry therefore sets `enableThinking: false` for the default Qwen3 tutoring benchmark. This prevents hidden/reasoning text from consuming the generation budget and keeps the first comparison focused on normal interactive tutoring latency and response quality.
+Hybrid Qwen3 chat templates such as `Qwen/Qwen3-8B` enable thinking by default. The registry therefore sets `enableThinking: false` for those hybrid candidates in the normal tutor benchmark. The primary `Qwen/Qwen3-4B-Instruct-2507` candidate is already a dedicated non-thinking instruct checkpoint and does not need that switch. This prevents hidden/reasoning text from consuming the generation budget and keeps the first comparison focused on normal interactive tutoring latency and response quality.
 
 Do not interpret this as a claim that reasoning mode is worse. If the non-thinking benchmark selects Qwen3 as a strong candidate, run a separate reasoning-focused evaluation for difficult Mathematics/Physics problems before deciding whether the deployed tutor should expose a reasoning mode.
 
@@ -253,7 +254,7 @@ After QLoRA finishes, load the base model and saved adapter once before doing a 
   --adapter "/content/drive/MyDrive/ai-for-ib/checkpoints/Dima-IB-Tutor-v1"
 ```
 
-The smoke test verifies that the adapter can be loaded, produces a non-trivial tutoring response, and uses the candidate registry's explicit Qwen thinking-mode setting. For default Qwen3 candidates that means non-thinking mode; the script fails if a `<think>` block appears unexpectedly.
+The smoke test verifies that the adapter can be loaded and produces a non-trivial tutoring response. For hybrid Qwen3 candidates with `enableThinking: false`, it also fails if a `<think>` block appears unexpectedly.
 
 This is only a plumbing check. A checkpoint still has to beat the unmodified base model on the held-out private evaluation set before promotion.
 

@@ -50,22 +50,22 @@ def recommendations(vram_gib: float | None) -> tuple[str, list[str], list[str]]:
         return (
             "Good for the 4B benchmark and likely 4B QLoRA at batch size 1 with gradient checkpointing. Treat 8B as benchmark-only unless a smoke test fits.",
             [
-                "Qwen/Qwen3-4B",
+                "Qwen/Qwen3-4B-Instruct-2507",
                 "microsoft/Phi-4-mini-instruct",
             ],
-            ["Qwen/Qwen3-4B"],
+            ["Qwen/Qwen3-4B-Instruct-2507"],
         )
 
     if vram_gib < 24:
         return (
             "Good for sequential 4-bit benchmarking of all default candidates and 4B QLoRA. Try an 8B smoke test before a full 8B training run.",
             [
-                "Qwen/Qwen3-4B",
+                "Qwen/Qwen3-4B-Instruct-2507",
                 "Qwen/Qwen3-8B",
                 "microsoft/Phi-4-mini-instruct",
             ],
             [
-                "Qwen/Qwen3-4B",
+                "Qwen/Qwen3-4B-Instruct-2507",
                 "microsoft/Phi-4-mini-instruct",
             ],
         )
@@ -73,12 +73,12 @@ def recommendations(vram_gib: float | None) -> tuple[str, list[str], list[str]]:
     return (
         "Strong runtime for the planned sequential benchmark and QLoRA. Benchmark first; train only the best IB candidate.",
         [
-            "Qwen/Qwen3-4B",
+            "Qwen/Qwen3-4B-Instruct-2507",
             "Qwen/Qwen3-8B",
             "microsoft/Phi-4-mini-instruct",
         ],
         [
-            "Qwen/Qwen3-4B",
+            "Qwen/Qwen3-4B-Instruct-2507",
             "Qwen/Qwen3-8B",
             "microsoft/Phi-4-mini-instruct",
         ],

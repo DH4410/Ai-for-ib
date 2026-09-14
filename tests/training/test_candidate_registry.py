@@ -13,7 +13,7 @@ assert SPEC is not None and SPEC.loader is not None
 
 
 class CandidateRegistryTest(unittest.TestCase):
-    def test_qwen_candidates_explicitly_disable_default_thinking(self):
+    def test_default_small_qwen_is_updated_text_instruct_checkpoint(self):
         import json
 
         payload = json.loads(
@@ -21,18 +21,24 @@ class CandidateRegistryTest(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        qwen = [
-            candidate
+        by_id = {
+            candidate["id"]: candidate
             for candidate in payload["candidates"]
-            if candidate["id"].startswith("Qwen/Qwen3-")
-        ]
+        }
 
-        self.assertGreater(len(qwen), 0)
-        self.assertTrue(
-            all(
-                candidate.get("enableThinking") is False
-                for candidate in qwen
-            )
+        updated = by_id[
+            "Qwen/Qwen3-4B-Instruct-2507"
+        ]
+        legacy = by_id["Qwen/Qwen3-4B"]
+        hybrid_8b = by_id["Qwen/Qwen3-8B"]
+
+        self.assertTrue(updated["enabledByDefault"])
+        self.assertFalse(updated["trustRemoteCode"])
+        self.assertNotIn("enableThinking", updated)
+        self.assertFalse(legacy["enabledByDefault"])
+        self.assertIs(
+            hybrid_8b.get("enableThinking"),
+            False,
         )
 
 
