@@ -64,10 +64,11 @@ Then run:
 npm run training:validate -- training/private-data/train.jsonl
 npm run training:validate -- training/private-data/eval.jsonl
 npm run training:audit-split -- training/private-data/train.jsonl training/private-data/eval.jsonl
+npm run training:plan -- training/private-data/train.jsonl
 npm run verify:private
 ```
 
-The validator checks schema, roles, duplicate IDs and coverage metadata without uploading the file. The split audit then checks for reused IDs, exact learner-prompt duplication, high-overlap learner prompts, and missing Physics/Chemistry/Mathematics × Learn/Practice/Mark/Revise coverage cells. It prints IDs and counts, not private prompt text.
+The validator checks schema, roles, duplicate IDs and coverage metadata without uploading the file. The split audit then checks for reused IDs, exact learner-prompt duplication, high-overlap learner prompts, and missing Physics/Chemistry/Mathematics × Learn/Practice/Mark/Revise coverage cells. It prints IDs and counts, not private prompt text. The training planner estimates token volume, likely 2,048-token truncation, effective batch size and optimizer-step count before Colab.
 
 ## Google Colab workflow
 

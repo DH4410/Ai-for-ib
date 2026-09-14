@@ -14,7 +14,8 @@
     "training:validate": "tsx scripts/validate-training-dataset.ts",
     "training:evaluate": "tsx scripts/run-model-eval.ts",
     "paper:index": "tsx scripts/index-past-paper.ts",
-    "training:audit-split": "tsx scripts/audit-training-split.ts"
+    "training:audit-split": "tsx scripts/audit-training-split.ts",
+    "training:plan": "tsx scripts/plan-training-run.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
