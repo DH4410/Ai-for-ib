@@ -24,7 +24,7 @@ describe("private study boundary", () => {
         "docs/INGESTION.md",
         "data/source-manifest.example.jsonl",
         "training/dataset.example.jsonl",
-        "training/eval.example.jsonl",
+        "training/benchmark.example.jsonl",
       ]),
     ).toEqual([]);
   });

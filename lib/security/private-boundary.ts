@@ -24,7 +24,7 @@ const ALLOWED_PATHS = new Set([
   ".env.example",
   "data/source-manifest.example.jsonl",
   "training/dataset.example.jsonl",
-  "training/eval.example.jsonl",
+  "training/benchmark.example.jsonl",
 ]);
 
 function normalizePath(path: string): string {

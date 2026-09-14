@@ -28,10 +28,10 @@ function expectedCells(): string[] {
 }
 
 describe("public synthetic training fixtures", () => {
-  it("keeps one valid smoke evaluation case for every core subject and mode", async () => {
+  it("keeps one valid smoke benchmark case for every core subject and mode", async () => {
     const cases = parseEvaluationJsonl(
       await readFile(
-        "training/eval.example.jsonl",
+        "training/benchmark.example.jsonl",
         "utf8",
       ),
     );
