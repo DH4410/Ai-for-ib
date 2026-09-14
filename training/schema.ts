@@ -1,3 +1,5 @@
+import { findIBDPTopic } from "@/lib/taxonomy/ibdp";
+
 export const TRAINING_SUBJECTS = [
   "physics",
   "chemistry",
@@ -38,6 +40,7 @@ export type TrainingExample = {
   prompt: TrainingMessage[];
   completion: [TrainingMessage];
   tags: string[];
+  topicIds?: string[];
 };
 
 export type TrainingDatasetSummary = {
@@ -45,6 +48,8 @@ export type TrainingDatasetSummary = {
   bySubject: Record<TrainingSubject, number>;
   byMode: Record<TrainingMode, number>;
   byDataOrigin: Record<TrainingDataOrigin, number>;
+  taggedWithTopics: number;
+  uniqueTopicIds: string[];
 };
 
 type UnknownRecord = Record<string, unknown>;
@@ -135,6 +140,55 @@ function parseCompletion(value: unknown): [TrainingMessage] {
   return [completion];
 }
 
+function parseTopicIds(
+  value: unknown,
+  subject: TrainingSubject,
+): string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length > 8 ||
+    value.some(
+      (topicId) =>
+        typeof topicId !== "string" ||
+        topicId.trim().length === 0,
+    )
+  ) {
+    throw new Error(
+      "topicIds must be an array of at most 8 non-empty strings",
+    );
+  }
+
+  const topicIds = [
+    ...new Set(
+      (value as string[]).map((topicId) =>
+        topicId.trim(),
+      ),
+    ),
+  ];
+
+  for (const topicId of topicIds) {
+    const topic = findIBDPTopic(topicId);
+    if (!topic) {
+      throw new Error(
+        `topicIds contains unknown IB topic: ${topicId}`,
+      );
+    }
+    if (
+      subject !== "general" &&
+      topic.subject !== subject
+    ) {
+      throw new Error(
+        `topicIds contains a ${topic.subject} topic for a ${subject} example: ${topicId}`,
+      );
+    }
+  }
+
+  return topicIds;
+}
+
 function parseTags(value: unknown): string[] {
   if (value === undefined) {
     return [];
@@ -165,14 +219,29 @@ export function parseTrainingExample(value: unknown): TrainingExample {
     throw new Error("id must be a stable lowercase identifier");
   }
 
+  const subject = enumValue(
+    value,
+    "subject",
+    TRAINING_SUBJECTS,
+  );
+  const topicIds = parseTopicIds(
+    value.topicIds,
+    subject,
+  );
+
   return {
     id,
-    subject: enumValue(value, "subject", TRAINING_SUBJECTS),
+    subject,
     mode: enumValue(value, "mode", TRAINING_MODES),
-    dataOrigin: enumValue(value, "dataOrigin", TRAINING_DATA_ORIGINS),
+    dataOrigin: enumValue(
+      value,
+      "dataOrigin",
+      TRAINING_DATA_ORIGINS,
+    ),
     prompt: parsePrompt(value.prompt),
     completion: parseCompletion(value.completion),
     tags: parseTags(value.tags),
+    ...(topicIds ? { topicIds } : {}),
   };
 }
 
@@ -228,10 +297,19 @@ export function summarizeTrainingExamples(
     TRAINING_DATA_ORIGINS.map((origin) => [origin, 0]),
   ) as Record<TrainingDataOrigin, number>;
 
+  const uniqueTopicIds = new Set<string>();
+  let taggedWithTopics = 0;
+
   for (const example of examples) {
     bySubject[example.subject] += 1;
     byMode[example.mode] += 1;
     byDataOrigin[example.dataOrigin] += 1;
+    if ((example.topicIds?.length ?? 0) > 0) {
+      taggedWithTopics += 1;
+      example.topicIds?.forEach((topicId) =>
+        uniqueTopicIds.add(topicId),
+      );
+    }
   }
 
   return {
@@ -239,5 +317,7 @@ export function summarizeTrainingExamples(
     bySubject,
     byMode,
     byDataOrigin,
+    taggedWithTopics,
+    uniqueTopicIds: [...uniqueTopicIds].sort(),
   };
 }

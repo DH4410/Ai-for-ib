@@ -73,6 +73,32 @@ describe("training dataset schema", () => {
     );
   });
 
+  it("validates optional IB topic metadata against the example subject", () => {
+    expect(
+      parseTrainingExample({
+        ...validExample,
+        topicIds: [
+          "physics.b.thermal-energy-transfers",
+        ],
+      }),
+    ).toMatchObject({
+      topicIds: [
+        "physics.b.thermal-energy-transfers",
+      ],
+    });
+
+    expect(() =>
+      parseTrainingExample({
+        ...validExample,
+        topicIds: [
+          "chemistry.structure.models",
+        ],
+      }),
+    ).toThrow(
+      "contains a chemistry topic for a physics example",
+    );
+  });
+
   it("summarizes subject, mode and origin coverage", () => {
     const examples = parseTrainingJsonl(JSON.stringify(validExample));
 
@@ -81,6 +107,8 @@ describe("training dataset schema", () => {
       bySubject: { physics: 1 },
       byMode: { learn: 1 },
       byDataOrigin: { synthetic: 1 },
+      taggedWithTopics: 0,
+      uniqueTopicIds: [],
     });
   });
 });

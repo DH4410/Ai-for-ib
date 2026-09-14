@@ -1,3 +1,5 @@
+import { findIBDPTopic } from "@/lib/taxonomy/ibdp";
+
 import {
   TRAINING_MODES,
   TRAINING_ROLES,
@@ -22,6 +24,7 @@ export type EvaluationCase = {
   mode: TrainingMode;
   prompt: TrainingMessage[];
   rubric: EvaluationRubric;
+  topicIds?: string[];
 };
 
 export type MechanicalEvaluation = {
@@ -175,6 +178,54 @@ function parseRubric(value: unknown): EvaluationRubric {
   };
 }
 
+function parseTopicIds(
+  value: unknown,
+  subject: TrainingSubject,
+): string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length > 8 ||
+    value.some(
+      (topicId) =>
+        typeof topicId !== "string" ||
+        topicId.trim().length === 0,
+    )
+  ) {
+    throw new Error(
+      "topicIds must be an array of at most 8 non-empty strings",
+    );
+  }
+
+  const topicIds = [
+    ...new Set(
+      (value as string[]).map((topicId) =>
+        topicId.trim(),
+      ),
+    ),
+  ];
+  for (const topicId of topicIds) {
+    const topic = findIBDPTopic(topicId);
+    if (!topic) {
+      throw new Error(
+        `topicIds contains unknown IB topic: ${topicId}`,
+      );
+    }
+    if (
+      subject !== "general" &&
+      topic.subject !== subject
+    ) {
+      throw new Error(
+        `topicIds contains a ${topic.subject} topic for a ${subject} benchmark case: ${topicId}`,
+      );
+    }
+  }
+
+  return topicIds;
+}
+
 export function parseEvaluationCase(value: unknown): EvaluationCase {
   if (!isRecord(value)) {
     throw new Error("evaluation case must be an object");
@@ -185,12 +236,27 @@ export function parseEvaluationCase(value: unknown): EvaluationCase {
     throw new Error("id must be a stable lowercase identifier");
   }
 
+  const subject = enumValue(
+    value,
+    "subject",
+    TRAINING_SUBJECTS,
+  );
+  const topicIds = parseTopicIds(
+    value.topicIds,
+    subject,
+  );
+
   return {
     id,
-    subject: enumValue(value, "subject", TRAINING_SUBJECTS),
-    mode: enumValue(value, "mode", TRAINING_MODES),
+    subject,
+    mode: enumValue(
+      value,
+      "mode",
+      TRAINING_MODES,
+    ),
     prompt: parsePrompt(value.prompt),
     rubric: parseRubric(value.rubric),
+    ...(topicIds ? { topicIds } : {}),
   };
 }
 

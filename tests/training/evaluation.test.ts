@@ -33,6 +33,32 @@ describe("private model evaluation", () => {
     expect(parseEvaluationCase(validCase)).toEqual(validCase);
   });
 
+  it("validates optional benchmark topic metadata", () => {
+    expect(
+      parseEvaluationCase({
+        ...validCase,
+        topicIds: [
+          "chemistry.reactivity.amount-rate-extent.rate",
+        ],
+      }),
+    ).toMatchObject({
+      topicIds: [
+        "chemistry.reactivity.amount-rate-extent.rate",
+      ],
+    });
+
+    expect(() =>
+      parseEvaluationCase({
+        ...validCase,
+        topicIds: [
+          "mathematics.functions",
+        ],
+      }),
+    ).toThrow(
+      "contains a mathematics topic for a chemistry benchmark case",
+    );
+  });
+
   it("reports line numbers and duplicate ids", () => {
     const line = JSON.stringify(validCase);
 
