@@ -11,40 +11,170 @@ export type QuestionCandidate = {
   extractionStatus: "candidate" | "ambiguous";
 };
 
+type QuestionLevel = "top" | "letter" | "roman";
+
 type QuestionMatch = {
+  level: QuestionLevel;
   questionNumber: string;
   subquestion?: string;
   text: string;
+  letterPart?: string;
+  romanPart?: string;
 };
 
-function extractVisibleMarks(text: string): number | undefined {
-  const bracketedMarks = text.match(/\[(\d+)\]\s*$/)?.[1];
-  const writtenMarks = text.match(/\((\d+)\s+marks?\)\s*$/i)?.[1];
+type MatchState = {
+  activeQuestionNumber?: string;
+  activeLetterPart?: string;
+  activeRomanPart?: string;
+};
+
+const ROMAN_PART = /^(?:i|ii|iii|iv|v|vi|vii|viii|ix|x)$/;
+
+function extractVisibleMarks(
+  text: string,
+): number | undefined {
+  const bracketedMarks =
+    text.match(/\[(\d+)\]\s*$/)?.[1];
+  const writtenMarks =
+    text.match(/\((\d+)\s+marks?\)\s*$/i)?.[1];
   const value = bracketedMarks ?? writtenMarks;
 
   return value ? Number(value) : undefined;
 }
 
-function matchQuestion(line: string, activeQuestionNumber?: string): QuestionMatch | undefined {
-  const topLevel = line.match(/^(\d+)[.)]\s*(.*)$/);
-  if (topLevel) {
-    return { questionNumber: topLevel[1], text: topLevel[2] };
+function nextLetter(value: string | undefined): string | undefined {
+  if (!value || !/^[a-z]$/.test(value)) {
+    return undefined;
   }
 
-  const subquestion = line.match(/^\(?([a-z])\)?[.)]\s*(.*)$/i);
-  if (subquestion && activeQuestionNumber) {
+  return String.fromCharCode(value.charCodeAt(0) + 1);
+}
+
+function parenthesizedPartLevel(
+  token: string,
+  state: MatchState,
+): "letter" | "roman" | undefined {
+  const normalized = token.toLocaleLowerCase();
+
+  if (
+    state.activeLetterPart &&
+    ROMAN_PART.test(normalized) &&
+    (
+      state.activeRomanPart !== undefined ||
+      normalized.length > 1 ||
+      (normalized === "i" &&
+        nextLetter(state.activeLetterPart) !== "i")
+    )
+  ) {
+    return "roman";
+  }
+
+  return /^[a-z]$/.test(normalized)
+    ? "letter"
+    : undefined;
+}
+
+function matchQuestion(
+  line: string,
+  state: MatchState,
+): QuestionMatch | undefined {
+  const combined = line.match(
+    /^(\d+)[.)]\s*\(([a-z])\)\s*(.*)$/i,
+  );
+  if (combined) {
+    const letterPart = combined[2].toLocaleLowerCase();
     return {
-      questionNumber: activeQuestionNumber,
-      subquestion: subquestion[1].toLowerCase(),
-      text: subquestion[2],
+      letterPart,
+      level: "letter",
+      questionNumber: combined[1],
+      subquestion: letterPart,
+      text: combined[3],
+    };
+  }
+
+  const topLevel = line.match(/^(\d+)[.)]\s*(.*)$/);
+  if (topLevel) {
+    return {
+      level: "top",
+      questionNumber: topLevel[1],
+      text: topLevel[2],
+    };
+  }
+
+  const parenthesized = line.match(
+    /^\(([a-z]+)\)\s*(.*)$/i,
+  );
+  if (parenthesized && state.activeQuestionNumber) {
+    const token =
+      parenthesized[1].toLocaleLowerCase();
+    const level = parenthesizedPartLevel(
+      token,
+      state,
+    );
+
+    if (level === "roman" && state.activeLetterPart) {
+      return {
+        letterPart: state.activeLetterPart,
+        level,
+        questionNumber: state.activeQuestionNumber,
+        romanPart: token,
+        subquestion: `${state.activeLetterPart}.${token}`,
+        text: parenthesized[2],
+      };
+    }
+
+    if (level === "letter") {
+      return {
+        letterPart: token,
+        level,
+        questionNumber: state.activeQuestionNumber,
+        subquestion: token,
+        text: parenthesized[2],
+      };
+    }
+  }
+
+  const dottedLetter = line.match(
+    /^([a-z])[.)]\s*(.*)$/i,
+  );
+  if (dottedLetter && state.activeQuestionNumber) {
+    const letterPart =
+      dottedLetter[1].toLocaleLowerCase();
+    return {
+      letterPart,
+      level: "letter",
+      questionNumber: state.activeQuestionNumber,
+      subquestion: letterPart,
+      text: dottedLetter[2],
     };
   }
 
   return undefined;
 }
 
-function candidateId(documentId: string, questionNumber: string, subquestion?: string): string {
+function candidateId(
+  documentId: string,
+  questionNumber: string,
+  subquestion?: string,
+): string {
   return `${documentId}-q${questionNumber}${subquestion ?? ""}`;
+}
+
+function withContext(
+  context: string | undefined,
+  text: string,
+): string {
+  const cleanContext = context?.trim();
+  const cleanText = text.trim();
+
+  if (!cleanContext) {
+    return cleanText;
+  }
+  if (!cleanText) {
+    return cleanContext;
+  }
+
+  return `${cleanContext}\n${cleanText}`;
 }
 
 export function extractQuestionCandidates(
@@ -54,11 +184,20 @@ export function extractQuestionCandidates(
   const candidates: QuestionCandidate[] = [];
   const candidateIds = new Set<string>();
   let activeQuestionNumber: string | undefined;
+  let activeLetterPart: string | undefined;
+  let activeRomanPart: string | undefined;
   let activeCandidate: QuestionCandidate | undefined;
+  let activeTopCandidate: QuestionCandidate | undefined;
+  let activeLetterCandidate: QuestionCandidate | undefined;
 
   for (const page of pages) {
-    if (!Number.isInteger(page.pageNumber) || page.pageNumber < 1) {
-      throw new Error("question candidate pages must have positive one-based page numbers");
+    if (
+      !Number.isInteger(page.pageNumber) ||
+      page.pageNumber < 1
+    ) {
+      throw new Error(
+        "question candidate pages must have positive one-based page numbers",
+      );
     }
 
     for (const rawLine of page.text.split(/\r?\n/)) {
@@ -67,30 +206,88 @@ export function extractQuestionCandidates(
         continue;
       }
 
-      const match = matchQuestion(line, activeQuestionNumber);
+      const match = matchQuestion(line, {
+        activeLetterPart,
+        activeQuestionNumber,
+        activeRomanPart,
+      });
       if (!match) {
         if (activeCandidate) {
-          activeCandidate.text = `${activeCandidate.text}\n${line}`;
+          activeCandidate.text =
+            `${activeCandidate.text}\n${line}`;
           activeCandidate.pageEnd = page.pageNumber;
         }
         continue;
       }
 
       activeQuestionNumber = match.questionNumber;
-      const id = candidateId(documentId, match.questionNumber, match.subquestion);
+
+      let contextualText = match.text;
+      if (match.level === "top") {
+        activeLetterPart = undefined;
+        activeRomanPart = undefined;
+        activeLetterCandidate = undefined;
+      } else if (match.level === "letter") {
+        if (
+          activeTopCandidate?.questionNumber ===
+          match.questionNumber
+        ) {
+          contextualText = withContext(
+            activeTopCandidate.text,
+            match.text,
+          );
+        }
+        activeLetterPart = match.letterPart;
+        activeRomanPart = undefined;
+      } else if (match.level === "roman") {
+        if (
+          activeLetterCandidate?.questionNumber ===
+          match.questionNumber &&
+          activeLetterCandidate.subquestion ===
+            match.letterPart
+        ) {
+          contextualText = withContext(
+            activeLetterCandidate.text,
+            match.text,
+          );
+        } else if (
+          activeTopCandidate?.questionNumber ===
+          match.questionNumber
+        ) {
+          contextualText = withContext(
+            activeTopCandidate.text,
+            match.text,
+          );
+        }
+        activeRomanPart = match.romanPart;
+      }
+
+      const id = candidateId(
+        documentId,
+        match.questionNumber,
+        match.subquestion,
+      );
       const candidate: QuestionCandidate = {
-        extractionStatus: candidateIds.has(id) ? "ambiguous" : "candidate",
+        extractionStatus: candidateIds.has(id)
+          ? "ambiguous"
+          : "candidate",
         id,
         marks: extractVisibleMarks(line),
         pageEnd: page.pageNumber,
         pageStart: page.pageNumber,
         questionNumber: match.questionNumber,
         subquestion: match.subquestion,
-        text: match.text,
+        text: contextualText,
       };
       candidates.push(candidate);
       candidateIds.add(id);
       activeCandidate = candidate;
+
+      if (match.level === "top") {
+        activeTopCandidate = candidate;
+      } else if (match.level === "letter") {
+        activeLetterCandidate = candidate;
+      }
     }
   }
 
