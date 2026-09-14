@@ -26,7 +26,11 @@ class Candidate:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--eval", required=True, help="Private evaluation JSONL")
+    parser.add_argument(
+        "--benchmark",
+        required=True,
+        help="Private rubric-based held-out benchmark JSONL",
+    )
     parser.add_argument(
         "--candidates",
         default="training/model-candidates.json",
@@ -72,21 +76,21 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
                 case = json.loads(line)
             except json.JSONDecodeError as error:
                 raise ValueError(
-                    f"invalid evaluation JSON on line {line_number}"
+                    f"invalid benchmark JSON on line {line_number}"
                 ) from error
 
             if not isinstance(case.get("prompt"), list):
                 raise ValueError(
-                    f"evaluation case on line {line_number} has no prompt"
+                    f"benchmark case on line {line_number} has no prompt"
                 )
             if not isinstance(case.get("rubric"), dict):
                 raise ValueError(
-                    f"evaluation case on line {line_number} has no rubric"
+                    f"benchmark case on line {line_number} has no rubric"
                 )
             cases.append(case)
 
     if not cases:
-        raise ValueError("evaluation dataset is empty")
+        raise ValueError("benchmark dataset is empty")
 
     return cases
 
@@ -383,13 +387,13 @@ def main() -> None:
             "A CUDA GPU is required. Select a GPU runtime in Colab."
         )
 
-    eval_path = Path(args.eval)
-    if not eval_path.is_file():
+    benchmark_path = Path(args.benchmark)
+    if not benchmark_path.is_file():
         raise SystemExit(
-            f"evaluation file does not exist: {eval_path}"
+            f"evaluation file does not exist: {benchmark_path}"
         )
 
-    cases = read_jsonl(eval_path)
+    cases = read_jsonl(benchmark_path)
     if args.max_cases > 0:
         cases = cases[: args.max_cases]
 
