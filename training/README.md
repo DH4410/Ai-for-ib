@@ -120,6 +120,8 @@ Put `train.jsonl` and `eval.jsonl` in your own Drive, not in the Git repository.
 
 The runner uses 4-bit NF4 quantization plus LoRA on all linear layers and saves the adapter/checkpoint outside the repository.
 
+If `microsoft/Phi-4-mini-instruct` wins the benchmark, add `--trust-remote-code` to both the QLoRA command and the later adapter smoke-test command because that candidate is explicitly marked as requiring repository custom code. Do not add this flag for models that do not require it.
+
 If a chosen model requires a Hugging Face token, enter it using Colab's secret/environment facilities. Never commit it to `.env`, a notebook cell, a JSONL file or Git.
 
 ## Evaluation rule
