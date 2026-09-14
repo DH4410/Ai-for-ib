@@ -31,6 +31,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--packing", action="store_true")
+    parser.add_argument(
+        "--trust-remote-code",
+        action="store_true",
+        help="Allow model repository custom code when the selected candidate requires it.",
+    )
     return parser.parse_args()
 
 
@@ -81,7 +86,10 @@ def main() -> None:
         target_modules="all-linear",
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(args.base_model)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.base_model,
+        trust_remote_code=args.trust_remote_code,
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -105,6 +113,7 @@ def main() -> None:
         fp16=compute_dtype == torch.float16,
         optim="paged_adamw_8bit",
         seed=42,
+        trust_remote_code=args.trust_remote_code,
     )
 
     trainer = SFTTrainer(
