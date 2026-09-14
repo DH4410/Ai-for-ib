@@ -1082,3 +1082,27 @@ button {
     padding-inline: 16px;
   }
 }
+
+
+.progressTopicActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.progressTopicActions button {
+  border: 1px solid #2d4155;
+  border-radius: 6px;
+  background: #13202b;
+  color: #9bb7cf;
+  cursor: pointer;
+  font: inherit;
+  font-size: 8px;
+  padding: 4px 6px;
+}
+
+.progressTopicActions button:hover {
+  border-color: #47627d;
+  color: #c7dced;
+}

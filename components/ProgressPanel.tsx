@@ -26,7 +26,19 @@ type ProgressItem = {
   updatedAt: string;
 };
 
-export function ProgressPanel({ subject }: { subject: Subject }) {
+export type ProgressStudyTarget = {
+  topicId: string;
+  label: string;
+  misconceptionTags: string[];
+};
+
+export function ProgressPanel({
+  subject,
+  onReviseTopic,
+}: {
+  subject: Subject;
+  onReviseTopic?: (target: ProgressStudyTarget) => void;
+}) {
   const configured = isBrowserSupabaseConfigured();
   const client = useMemo(
     () => getBrowserSupabaseClient(),
@@ -242,7 +254,24 @@ export function ProgressPanel({ subject }: { subject: Subject }) {
                       : ""}
                   </span>
                 </div>
-                <b>{masteryPercent}%</b>
+                <div className="progressTopicActions">
+                  <b>{masteryPercent}%</b>
+                  {onReviseTopic ? (
+                    <button
+                      onClick={() =>
+                        onReviseTopic({
+                          label: item.label,
+                          misconceptionTags:
+                            item.misconceptionTags,
+                          topicId: item.topicId,
+                        })
+                      }
+                      type="button"
+                    >
+                      Revise
+                    </button>
+                  ) : null}
+                </div>
               </div>
             );
           })}

@@ -3,7 +3,10 @@
 import { FormEvent, useMemo, useState } from "react";
 
 import { CapabilityStatus } from "@/components/CapabilityStatus";
-import { ProgressPanel } from "@/components/ProgressPanel";
+import {
+  ProgressPanel,
+  type ProgressStudyTarget,
+} from "@/components/ProgressPanel";
 import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
@@ -87,6 +90,18 @@ export function TutorShell() {
   const [hintsFirst, setHintsFirst] = useState(true);
   const [selectedMarkSource, setSelectedMarkSource] =
     useState<SourceCitation | null>(null);
+
+  function prepareRevision(target: ProgressStudyTarget) {
+    setSelectedMarkSource(null);
+    setMode("revise");
+    const mistakeFocus =
+      target.misconceptionTags.length > 0
+        ? ` Focus especially on my recurring mistakes: ${target.misconceptionTags.join(", ")}.`
+        : "";
+    setInput(
+      `Revise ${target.label} with me. Start with a short active-recall check, then explain the parts I get wrong and finish with a few IB-style questions.${mistakeFocus}`,
+    );
+  }
 
   const placeholder = useMemo(() => {
     if (mode === "mark") {
@@ -246,7 +261,10 @@ export function TutorShell() {
           </div>
         </section>
 
-        <ProgressPanel subject={subject} />
+        <ProgressPanel
+          onReviseTopic={prepareRevision}
+          subject={subject}
+        />
         <SourceLibraryPanel subject={subject} />
         <CapabilityStatus />
 
