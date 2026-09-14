@@ -20,6 +20,7 @@ export type StudyRetrievalFilters = {
   documentTypes?: StudyDocumentType[];
   explanationLevel?: "simple" | "standard" | "full";
   hintsFirst?: boolean;
+  level?: "HL" | "SL";
   paper?: string;
   pastPaperQuestionId?: string;
   requireMarkscheme?: boolean;
@@ -140,6 +141,7 @@ export function createStudyRetriever({
     if (wantsPastPaperQuestions(args.filters)) {
       const questions = await repository.searchPastPaperQuestions({
         limit,
+        level: args.filters?.level,
         pairedOnly:
           mode === "mark" ||
           args.filters?.requireMarkscheme === true,

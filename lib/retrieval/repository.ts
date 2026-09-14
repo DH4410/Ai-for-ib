@@ -16,6 +16,7 @@ export type PastPaperRetrievalRequest = {
   subject: Subject;
   query: string;
   limit: number;
+  level?: "HL" | "SL";
   topicIds?: string[];
   years?: number[];
   paper?: string;
@@ -42,6 +43,7 @@ export type StoredPastPaperQuestion = {
   subject: Subject;
   title: string;
   locator: string;
+  level?: "HL" | "SL";
   questionText: string;
   markschemeText: string | null;
   topicIds: string[];
@@ -109,6 +111,9 @@ function filterPastPapers(
         request.years.includes(question.year)) &&
       (!normalizedPaper ||
         question.paper.toLocaleLowerCase() === normalizedPaper) &&
+      (!request.level ||
+        question.level?.toLocaleUpperCase() ===
+          request.level) &&
       (!request.pairedOnly || question.pairingStatus === "paired") &&
       containsEveryTopic(question.topicIds, request.topicIds),
   );
@@ -243,6 +248,7 @@ type RpcPastPaperRow = {
   subject: Subject;
   title: string;
   locator: string;
+  level: "HL" | "SL";
   question_text: string;
   markscheme_text: string | null;
   topic_ids: string[] | null;
@@ -284,6 +290,7 @@ function toRankedPastPaperQuestion(
     documentId: row.document_id,
     id: row.id,
     locator: row.locator,
+    level: row.level,
     marks: row.marks,
     markschemeText: row.markscheme_text,
     pairingStatus: row.pairing_status,
@@ -352,6 +359,7 @@ export class SupabaseStudySourceRepository implements StudySourceRepository {
     const { data, error } = await this.client.rpc(
       "search_private_past_paper_questions",
       {
+        p_level: request.level ?? null,
         p_limit: request.limit,
         p_paired_only: request.pairedOnly ?? false,
         p_paper: request.paper ?? null,

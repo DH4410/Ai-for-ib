@@ -28,6 +28,7 @@ const pairedQuestion = {
   documentId: "physics-m25-p2",
   id: "physics-m25-p2-q4",
   locator: "May 2025 · HL · P2 · Q4",
+  level: "HL" as const,
   marks: 6,
   markschemeText: "Official owned-fixture markscheme text.",
   pairingStatus: "paired" as const,
@@ -78,6 +79,7 @@ describe("study retrieval façade", () => {
 
     const result = await retrieve({
       filters: {
+        level: "HL",
         paper: "p2",
         realPastPapersOnly: true,
         years: [2025],
@@ -102,6 +104,38 @@ describe("study retrieval façade", () => {
     expect(result[0]?.text).not.toContain(
       "Official owned-fixture markscheme text",
     );
+  });
+
+  it("does not mix SL questions into an HL paper search", async () => {
+    const retrieve = createStudyRetriever({
+      repository: new InMemoryStudySourceRepository(
+        [],
+        [
+          pairedQuestion,
+          {
+            ...pairedQuestion,
+            id: "physics-m25-sl-p2-q4",
+            level: "SL",
+            locator: "May 2025 · SL · P2 · Q4",
+            score: 0.99,
+          },
+        ],
+      ),
+    });
+
+    const result = await retrieve({
+      filters: {
+        level: "HL",
+        realPastPapersOnly: true,
+      },
+      mode: "practice",
+      query: "thermal energy",
+      subject: "physics",
+    });
+
+    expect(result.map(({ id }) => id)).toEqual([
+      "physics-m25-p2-q4",
+    ]);
   });
 
   it("requires a paired paper and includes its official markscheme in mark mode", async () => {

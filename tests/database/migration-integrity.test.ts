@@ -42,6 +42,18 @@ describe("Supabase migration integrity", () => {
     expect(bodyCount).toBe(functionCount);
   });
 
+  it("keeps HL/SL filtering in the private past-paper RPC contract", async () => {
+    const sql = await migration();
+
+    expect(sql).toContain("p_level text default null");
+    expect(sql).toContain(
+      "or upper(question.level) = upper(p_level)",
+    );
+    expect(sql).toContain(
+      "text, text, integer[], text, text, text[], boolean, integer",
+    );
+  });
+
   it("keeps SECURITY DEFINER search paths out of public", async () => {
     const sql = await migration();
 

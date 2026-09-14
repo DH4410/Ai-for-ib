@@ -13,6 +13,7 @@ describe("chat request validation", () => {
     expect(
       parseChatRequest({
         filters: {
+          level: "hl",
           paper: "p2",
           questionCount: 3,
           requireMarkscheme: true,
@@ -24,12 +25,24 @@ describe("chat request validation", () => {
         subject: "physics",
       }).filters,
     ).toEqual({
+      level: "HL",
       paper: "p2",
       questionCount: 3,
       requireMarkscheme: true,
       realPastPapersOnly: true,
       years: [2022, 2025],
     });
+  });
+
+  it("rejects unsupported IB levels", () => {
+    expect(() =>
+      parseChatRequest({
+        filters: { level: "higher" },
+        message: "Give questions",
+        mode: "practice",
+        subject: "physics",
+      }),
+    ).toThrow("filters.level must be HL or SL");
   });
 
   it("keeps an exact real-paper question id for marking continuity", () => {

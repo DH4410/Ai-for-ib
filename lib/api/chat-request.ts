@@ -21,6 +21,7 @@ export type ChatRequestFilters = {
   documentTypes?: StudyDocumentType[];
   explanationLevel?: "simple" | "standard" | "full";
   hintsFirst?: boolean;
+  level?: "HL" | "SL";
   paper?: string;
   pastPaperQuestionId?: string;
   questionCount?: number;
@@ -84,6 +85,16 @@ function parseFilters(value: unknown): ChatRequestFilters | undefined {
       return invalid("filters.years must contain at most 10 years between 2020 and 2030");
     }
     filters.years = [...new Set(value.years as number[])];
+  }
+  if (value.level !== undefined) {
+    if (
+      typeof value.level !== "string" ||
+      !["HL", "SL"].includes(value.level.toUpperCase())
+    ) {
+      return invalid("filters.level must be HL or SL");
+    }
+    filters.level =
+      value.level.toUpperCase() as "HL" | "SL";
   }
   if (value.paper !== undefined) {
     if (typeof value.paper !== "string" || !/^p(?:1a|1b|[123])$/i.test(value.paper)) {

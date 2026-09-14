@@ -107,6 +107,7 @@ export function TutorShell() {
   const [modelName, setModelName] = useState("not connected");
   const [realPastPapers, setRealPastPapers] = useState(false);
   const [paperFilter, setPaperFilter] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [realQuestionCount, setRealQuestionCount] =
     useState<1 | 3 | 5>(1);
@@ -194,6 +195,11 @@ export function TutorShell() {
             ...(realPastPapers
               ? {
                   documentTypes: ["question-paper"],
+                  level:
+                    levelFilter === "HL" ||
+                    levelFilter === "SL"
+                      ? levelFilter
+                      : undefined,
                   paper: paperFilter || undefined,
                   questionCount: realQuestionCount,
                   requireMarkscheme,
@@ -308,6 +314,7 @@ export function TutorShell() {
                 onClick={() => {
                   setSubject(option.id);
                   setPaperFilter("");
+                  setLevelFilter("");
                   setFocusedTopicId("");
                   setSelectedMarkSource(null);
                 }}
@@ -483,6 +490,21 @@ export function TutorShell() {
 
             {realPastPapers ? (
               <div className="paperFilters">
+                <label>
+                  <span>Level</span>
+                  <select
+                    aria-label="Past-paper level"
+                    onChange={(event) =>
+                      setLevelFilter(event.target.value)
+                    }
+                    value={levelFilter}
+                  >
+                    <option value="">Any level</option>
+                    <option value="HL">HL</option>
+                    <option value="SL">SL</option>
+                  </select>
+                </label>
+
                 <label>
                   <span>Paper</span>
                   <select

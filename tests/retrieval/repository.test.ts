@@ -33,6 +33,7 @@ const pastPapers = [
     documentId: "physics-m25-p2",
     id: "physics-m25-p2-q4",
     locator: "May 2025 · HL · P2 · Q4",
+    level: "HL" as const,
     marks: 6,
     markschemeText: "Award marks for energy balance and correct units.",
     pairingStatus: "paired" as const,
@@ -48,7 +49,8 @@ const pastPapers = [
   {
     documentId: "physics-m24-p1a",
     id: "physics-m24-p1a-q1",
-    locator: "May 2024 · HL · P1A · Q1",
+    locator: "May 2024 · SL · P1A · Q1",
+    level: "SL" as const,
     marks: 1,
     markschemeText: null,
     pairingStatus: "question_only" as const,
@@ -89,6 +91,7 @@ describe("study source repository", () => {
     );
 
     const result = await repository.searchPastPaperQuestions({
+      level: "HL",
       limit: 5,
       pairedOnly: true,
       paper: "p2",
