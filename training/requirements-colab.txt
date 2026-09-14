@@ -1,6 +1,8 @@
-transformers
-datasets
-trl
-peft
-accelerate
-bitsandbytes
+# Pinned training stack verified against the September 2026 APIs used here.
+# PyTorch is intentionally not pinned: Colab supplies a CUDA-matched torch build.
+transformers==5.17.0
+datasets==5.0.1
+trl==1.13.0
+peft==0.20.0
+accelerate==1.15.0
+bitsandbytes==0.50.0

@@ -91,7 +91,7 @@ For the first plumbing test, use a small instruct model. After the pipeline work
 ```bash
 !git clone https://github.com/DH4410/Ai-for-ib.git
 %cd Ai-for-ib
-!pip install -U -r training/requirements-colab.txt
+!pip install --upgrade --no-cache-dir -r training/requirements-colab.txt
 ```
 
 ### 3. Mount Drive for private data/checkpoints
@@ -234,3 +234,21 @@ After QLoRA finishes, load the base model and saved adapter once before doing a 
 The smoke test verifies that the adapter can be loaded, produces a non-trivial tutoring response, and uses the candidate registry's explicit Qwen thinking-mode setting. For default Qwen3 candidates that means non-thinking mode; the script fails if a `<think>` block appears unexpectedly.
 
 This is only a plumbing check. A checkpoint still has to beat the unmodified base model on the held-out private evaluation set before promotion.
+
+
+## Colab dependency reproducibility
+
+The Hugging Face/QLoRA packages in `training/requirements-colab.txt` are pinned to the versions verified for this training code. PyTorch is deliberately **not** pinned there because Colab installs a CUDA-compatible PyTorch build for the assigned runtime; replacing it blindly can break GPU compatibility.
+
+The pinned stack is:
+
+```text
+transformers 5.17.0
+datasets 5.0.1
+trl 1.13.0
+peft 0.20.0
+accelerate 1.15.0
+bitsandbytes 0.50.0
+```
+
+If this stack is intentionally upgraded later, rerun the base-model benchmark plumbing test before starting a full fine-tune.
