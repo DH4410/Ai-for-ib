@@ -43,12 +43,12 @@ describe("private local file handoff", () => {
       verifyLocalFileHandoff(inputPath, {
         byteCount: 18,
         checksumSha256:
-          "9368a0a6d109fe307a6bbb50e0c4620c07fd35237a975f1180bad5e6c384ae09",
+          "cff510ce2bba7f07a55e538395cbcc8b25abf055ff9ca0e797db1f4a0731826a",
       }),
     ).resolves.toEqual({
       byteCount: 18,
       checksumSha256:
-        "9368a0a6d109fe307a6bbb50e0c4620c07fd35237a975f1180bad5e6c384ae09",
+        "cff510ce2bba7f07a55e538395cbcc8b25abf055ff9ca0e797db1f4a0731826a",
     });
   });
 
