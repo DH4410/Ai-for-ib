@@ -852,7 +852,7 @@ language sql
 stable
 security definer
 set search_path = pg_catalog, private
-as $
+as $$
   select
     topic.subject,
     mastery.topic_id,
@@ -892,7 +892,7 @@ as $
     mastery.mastery_estimate asc,
     mastery.next_review_at asc nulls first,
     mastery.topic_id;
-$;
+$$;
 
 revoke all on function public.record_private_learning_attempt(uuid, jsonb, jsonb)
   from public, anon, authenticated;
