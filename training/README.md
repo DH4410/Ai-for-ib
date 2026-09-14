@@ -74,6 +74,14 @@ The validator checks schema, roles, duplicate IDs and coverage metadata without 
 
 In Colab, select a GPU runtime. Free/paid Colab hardware varies, so the base model is intentionally a command-line argument rather than hard-coded in the repository.
 
+After cloning/installing, run the Colab preflight before downloading large models:
+
+```bash
+!python training/colab_preflight.py
+```
+
+Paste the JSON output back into the development chat if you want the training command tuned to the exact GPU. The report contains hardware/runtime information only; it does not read or upload private training data.
+
 For the first plumbing test, use a small instruct model. After the pipeline works, benchmark stronger 3B-7B-class candidates that fit the GPU.
 
 ### 2. Clone the code and install training libraries
