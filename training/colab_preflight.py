@@ -8,8 +8,6 @@ import platform
 import shutil
 from dataclasses import asdict, dataclass
 
-import torch
-
 
 @dataclass(frozen=True)
 class RuntimeReport:
@@ -88,6 +86,8 @@ def recommendations(vram_gib: float | None) -> tuple[str, list[str], list[str]]:
 
 
 def build_report() -> RuntimeReport:
+    import torch
+
     cuda_available = torch.cuda.is_available()
     gpu_name = None
     total_vram_gib = None
