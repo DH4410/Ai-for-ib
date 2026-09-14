@@ -2,9 +2,12 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { ingestLocalSource } from "../lib/ingestion/ingest";
+import { verifyLocalFileHandoff } from "../lib/ingestion/handoff";
 import type { SourceDocument } from "../lib/study-source/types";
 
 type CliArguments = {
+  expectedByteCount?: number;
+  expectedSha256?: string;
   inputPath: string;
   inventoryPath: string;
   sourceId: string;
@@ -13,7 +16,7 @@ type CliArguments = {
 function usage(): string {
   return [
     "Usage:",
-    "  npx tsx scripts/ingest-source.ts --source-id <id> --input <local-file> [--inventory <metadata-json>]",
+    "  npx tsx scripts/ingest-source.ts --source-id <id> --input <local-file> [--inventory <metadata-json>] [--expected-sha256 <sha256>] [--expected-byte-count <bytes>]",
     "",
     "The input must be a file you normally downloaded or saved with authorized access.",
     "This command never accepts a URL and writes raw/extracted material only to ignored paths.",
@@ -44,7 +47,25 @@ function readCliArguments(args: string[]): CliArguments {
     throw new Error("--source-id and --input are required");
   }
 
+  const expectedByteCountRaw =
+    values.get("--expected-byte-count");
+  const expectedByteCount =
+    expectedByteCountRaw === undefined
+      ? undefined
+      : Number(expectedByteCountRaw);
+  if (
+    expectedByteCount !== undefined &&
+    (!Number.isSafeInteger(expectedByteCount) ||
+      expectedByteCount < 0)
+  ) {
+    throw new Error(
+      "--expected-byte-count must be a non-negative integer",
+    );
+  }
+
   return {
+    expectedByteCount,
+    expectedSha256: values.get("--expected-sha256"),
     inputPath,
     inventoryPath:
       values.get("--inventory") ?? resolve(process.cwd(), "data", "source-inventory.example.json"),
@@ -90,8 +111,25 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { inputPath, inventoryPath, sourceId } = readCliArguments(process.argv.slice(2));
+  const {
+    expectedByteCount,
+    expectedSha256,
+    inputPath,
+    inventoryPath,
+    sourceId,
+  } = readCliArguments(process.argv.slice(2));
   const source = await loadSourceDocument(inventoryPath, sourceId);
+
+  if (
+    expectedByteCount !== undefined ||
+    expectedSha256 !== undefined
+  ) {
+    await verifyLocalFileHandoff(inputPath, {
+      byteCount: expectedByteCount,
+      checksumSha256: expectedSha256,
+    });
+  }
+
   const result = await ingestLocalSource({
     inputPath,
     manifestPath: resolve(process.cwd(), "data", "source-manifest.jsonl"),

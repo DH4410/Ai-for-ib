@@ -64,7 +64,7 @@ The MCP server uses its already-authenticated Playwright context, starts from th
 managebac-mcp/.managebac/downloads/
 ```
 
-The response includes `localPath`, `filename`, `mimeType`, `byteCount`, and `sha256`.
+The response includes `localPath`, `filename`, `mimeType`, `byteCount`, and `sha256`. Pass the last two values into AI-for-IB ingestion so the handoff is verified before the file is materialized.
 
 ## 5. Match the file to AI-for-IB source metadata
 
@@ -85,7 +85,9 @@ Example:
 ```powershell
 npx tsx scripts/ingest-source.ts `
   --source-id physics-oxford-2023 `
-  --input "C:\path\to\managebac-mcp\.managebac\downloads\<sha>--PhysicsBook.pdf"
+  --input "C:\path\to\managebac-mcp\.managebac\downloads\<sha>--PhysicsBook.pdf" `
+  --expected-sha256 "<sha256 returned by managebac_download_file>" `
+  --expected-byte-count <byteCount returned by managebac_download_file>
 ```
 
 For a private custom inventory:
