@@ -60,4 +60,33 @@ describe("page-aware chunks", () => {
 
     expect(chunk?.equationReferences).toEqual(["p. 30: E = mc²"]);
   });
+
+  it("finds a syllabus heading after ordinary page header lines", () => {
+    const chunks = buildSemanticChunks(
+      [
+        {
+          pageNumber: 9,
+          text: [
+            "Physics Course Companion",
+            "Chapter header",
+            "Learning objectives",
+            "Worked example",
+            "Key idea",
+            "B.1 Thermal energy transfers",
+            "Readable content about thermal energy transfers. ".repeat(
+              4,
+            ),
+          ].join("\n"),
+        },
+      ],
+      {
+        documentId: "physics-book",
+        subject: "physics",
+      },
+    );
+
+    expect(chunks[0]?.title).toBe(
+      "B.1 Thermal energy transfers",
+    );
+  });
 });

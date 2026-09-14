@@ -44,6 +44,46 @@ describe("hybrid source ranking", () => {
     expect(ranked.map(({ id }) => id)).toEqual(["physics-b1-p43"]);
   });
 
+  it("interleaves distinct documents before filling extra passages from one source", () => {
+    const secondOxfordChunk = {
+      ...physicsB1,
+      id: "physics-b1-p44",
+      locator: "Theme B.1 — p. 44",
+      pageEnd: 44,
+      pageStart: 44,
+    };
+    const physicsGuideChunk = {
+      ...physicsB1,
+      documentId: "physics-study-guide",
+      id: "physics-guide-b1",
+      locator: "Thermal physics — p. 12",
+      pageEnd: 12,
+      pageStart: 12,
+      title: "Physics Study Guide",
+    };
+
+    const ranked = fuseRankings({
+      lexical: [
+        physicsB1,
+        secondOxfordChunk,
+        physicsGuideChunk,
+      ],
+      limit: 3,
+      subject: "physics",
+      vector: [
+        physicsB1,
+        secondOxfordChunk,
+        physicsGuideChunk,
+      ],
+    });
+
+    expect(ranked.map(({ id }) => id)).toEqual([
+      "physics-b1-p43",
+      "physics-guide-b1",
+      "physics-b1-p44",
+    ]);
+  });
+
   it("formats a textbook source with its topic and page locator", () => {
     expect(formatSourceLocator(physicsB1)).toBe(
       "Physics Course Companion — Theme B.1 — p. 43",

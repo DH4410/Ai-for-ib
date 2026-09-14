@@ -34,7 +34,7 @@ function textQuality(text: string): number {
 function findHeading(text: string): string | undefined {
   return text
     .split(/\r?\n/)
-    .slice(0, 4)
+    .slice(0, 16)
     .map((line) => line.trim())
     .find((line) => line.length <= 160 && SECTION_HEADING_PATTERN.test(line));
 }

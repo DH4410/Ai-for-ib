@@ -32,7 +32,29 @@ export function fuseRankings({ lexical, vector, subject, limit }: HybridRankings
       });
   }
 
-  return [...merged.values()]
-    .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))
-    .slice(0, Math.max(1, Math.min(limit, 20)));
+  const sorted = [...merged.values()].sort(
+    (left, right) =>
+      right.score - left.score ||
+      left.id.localeCompare(right.id),
+  );
+  const diverse: RankedSourceChunk[] = [];
+  const deferred: RankedSourceChunk[] = [];
+  const seenDocuments = new Set<string>();
+
+  for (const chunk of sorted) {
+    const documentKey = chunk.documentId || chunk.id;
+
+    if (seenDocuments.has(documentKey)) {
+      deferred.push(chunk);
+      continue;
+    }
+
+    seenDocuments.add(documentKey);
+    diverse.push(chunk);
+  }
+
+  return [...diverse, ...deferred].slice(
+    0,
+    Math.max(1, Math.min(limit, 20)),
+  );
 }
