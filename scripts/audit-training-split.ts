@@ -6,6 +6,9 @@ import {
   hasTrainingSplitLeakage,
 } from "../training/split-audit";
 import {
+  parseEvaluationJsonl,
+} from "../training/evaluation";
+import {
   parseTrainingJsonl,
 } from "../training/schema";
 
@@ -48,7 +51,7 @@ async function main(): Promise<void> {
 
   const audit = auditTrainingSplit(
     parseTrainingJsonl(trainContents),
-    parseTrainingJsonl(evalContents),
+    parseEvaluationJsonl(evalContents),
   );
   console.log(JSON.stringify(audit, null, 2));
 

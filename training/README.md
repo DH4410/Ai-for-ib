@@ -68,7 +68,7 @@ npm run training:plan -- training/private-data/train.jsonl
 npm run verify:private
 ```
 
-The validator checks schema, roles, duplicate IDs and coverage metadata without uploading the file. The split audit then checks for reused IDs, exact learner-prompt duplication, high-overlap learner prompts, and missing Physics/Chemistry/Mathematics × Learn/Practice/Mark/Revise coverage cells. It prints IDs and counts, not private prompt text. The training planner estimates token volume, likely 2,048-token truncation, effective batch size and optimizer-step count before Colab.
+The validator checks schema, roles, duplicate IDs and coverage metadata without uploading the file. The split audit understands the separate rubric-based evaluation schema and checks for reused IDs, exact learner-prompt duplication, high-overlap learner prompts, and missing Physics/Chemistry/Mathematics × Learn/Practice/Mark/Revise coverage cells. It prints IDs and counts, not private prompt text. The training planner estimates token volume, likely 2,048-token truncation, effective batch size and optimizer-step count before Colab.
 
 ## Google Colab workflow
 
@@ -252,3 +252,17 @@ bitsandbytes 0.50.0
 ```
 
 If this stack is intentionally upgraded later, rerun the base-model benchmark plumbing test before starting a full fine-tune.
+
+
+## Initial behavior-data target
+
+These are **starting coverage targets**, not magic minimums and not a reason to pad the dataset with low-quality examples:
+
+- Training: about **100 strong examples per core subject × mode cell**.
+  - 3 subjects × 4 modes × 100 ≈ **1,200 behavior examples**.
+- Held-out evaluation: about **10 cases per core subject × mode cell**.
+  - 3 subjects × 4 modes × 10 ≈ **120 evaluation cases**.
+
+The split audit reports shortfalls against these targets but does not fail because of them. Leakage still fails the audit.
+
+Prefer fewer carefully written examples over thousands of repetitive templates. Expand the cells where the base-model benchmark and real tutoring errors show weaknesses. Raw textbook/past-paper passages remain in RAG unless training rights explicitly permit them.

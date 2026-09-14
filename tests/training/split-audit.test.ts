@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  parseEvaluationCase,
+  type EvaluationCase,
+} from "@/training/evaluation";
+import {
   auditTrainingSplit,
+  EVAL_TARGET_PER_CORE_CELL,
   hasTrainingSplitLeakage,
+  TRAIN_TARGET_PER_CORE_CELL,
 } from "@/training/split-audit";
 import {
   parseTrainingExample,
   type TrainingExample,
 } from "@/training/schema";
 
-function example(
+function trainExample(
   id: string,
   subject: "physics" | "chemistry",
   mode: "learn" | "mark",
@@ -37,10 +43,35 @@ function example(
   });
 }
 
+function evaluationCase(
+  id: string,
+  subject: "physics" | "chemistry",
+  mode: "learn" | "mark",
+  user: string,
+): EvaluationCase {
+  return parseEvaluationCase({
+    id,
+    mode,
+    prompt: [
+      {
+        role: "system",
+        content: "Act as an IB tutor.",
+      },
+      { role: "user", content: user },
+    ],
+    rubric: {
+      forbiddenPhrases: [],
+      requiredConceptGroups: [["energy"]],
+      shouldAskLearnerQuestion: false,
+    },
+    subject,
+  });
+}
+
 describe("training split audit", () => {
-  it("detects exact and near-duplicate learner prompts across train and eval", () => {
+  it("accepts the real rubric-based eval schema and detects near prompt leakage", () => {
     const train = [
-      example(
+      trainExample(
         "physics-learn-001",
         "physics",
         "learn",
@@ -48,7 +79,7 @@ describe("training split audit", () => {
       ),
     ];
     const evaluation = [
-      example(
+      evaluationCase(
         "physics-learn-002",
         "physics",
         "learn",
@@ -68,12 +99,14 @@ describe("training split audit", () => {
         trainId: "physics-learn-001",
       }),
     ]);
-    expect(hasTrainingSplitLeakage(audit)).toBe(true);
+    expect(hasTrainingSplitLeakage(audit)).toBe(
+      true,
+    );
   });
 
-  it("reports missing subject/mode cells without failing a clean split", () => {
+  it("reports coverage gaps and non-blocking target shortfalls", () => {
     const train = [
-      example(
+      trainExample(
         "physics-learn-001",
         "physics",
         "learn",
@@ -81,7 +114,7 @@ describe("training split audit", () => {
       ),
     ];
     const evaluation = [
-      example(
+      evaluationCase(
         "chemistry-mark-001",
         "chemistry",
         "mark",
@@ -94,12 +127,32 @@ describe("training split audit", () => {
       evaluation,
     );
 
-    expect(hasTrainingSplitLeakage(audit)).toBe(false);
+    expect(hasTrainingSplitLeakage(audit)).toBe(
+      false,
+    );
     expect(audit.trainCoverageGaps).toContain(
       "chemistry:mark",
     );
     expect(audit.evalCoverageGaps).toContain(
       "physics:learn",
     );
+    expect(
+      audit.trainCoverageShortfalls.find(
+        ({ cell }) => cell === "physics:learn",
+      ),
+    ).toMatchObject({
+      count: 1,
+      missing: TRAIN_TARGET_PER_CORE_CELL - 1,
+      target: TRAIN_TARGET_PER_CORE_CELL,
+    });
+    expect(
+      audit.evalCoverageShortfalls.find(
+        ({ cell }) => cell === "chemistry:mark",
+      ),
+    ).toMatchObject({
+      count: 1,
+      missing: EVAL_TARGET_PER_CORE_CELL - 1,
+      target: EVAL_TARGET_PER_CORE_CELL,
+    });
   });
 });

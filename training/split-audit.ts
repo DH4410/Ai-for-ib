@@ -1,3 +1,6 @@
+import type {
+  EvaluationCase,
+} from "@/training/evaluation";
 import {
   TRAINING_MODES,
   type TrainingExample,
@@ -11,10 +14,30 @@ const CORE_SUBJECTS = [
   "mathematics",
 ] as const satisfies readonly TrainingSubject[];
 
+export const TRAIN_TARGET_PER_CORE_CELL = 100;
+export const EVAL_TARGET_PER_CORE_CELL = 10;
+
+type PromptCase = {
+  id: string;
+  subject: TrainingSubject;
+  mode: TrainingMode;
+  prompt: Array<{
+    role: string;
+    content: string;
+  }>;
+};
+
 export type SplitLeakage = {
   evalId: string;
   trainId: string;
   similarity: number;
+};
+
+export type CoverageShortfall = {
+  cell: string;
+  count: number;
+  target: number;
+  missing: number;
 };
 
 export type TrainingSplitAudit = {
@@ -25,10 +48,12 @@ export type TrainingSplitAudit = {
   nearPromptOverlaps: SplitLeakage[];
   trainCoverageGaps: string[];
   evalCoverageGaps: string[];
+  trainCoverageShortfalls: CoverageShortfall[];
+  evalCoverageShortfalls: CoverageShortfall[];
 };
 
 function normalizedUserPrompt(
-  example: TrainingExample,
+  example: PromptCase,
 ): string {
   return example.prompt
     .filter(({ role }) => role === "user")
@@ -68,26 +93,72 @@ function jaccard(
   return union === 0 ? 0 : intersection / union;
 }
 
+function cellCounts(
+  examples: Array<{
+    subject: TrainingSubject;
+    mode: TrainingMode;
+  }>,
+): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  for (const { subject, mode } of examples) {
+    const key = `${subject}:${mode}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 function coverageGaps(
-  examples: TrainingExample[],
+  examples: Array<{
+    subject: TrainingSubject;
+    mode: TrainingMode;
+  }>,
 ): string[] {
-  const present = new Set(
-    examples.map(
-      ({ subject, mode }) => `${subject}:${mode}`,
-    ),
-  );
+  const counts = cellCounts(examples);
 
   return CORE_SUBJECTS.flatMap((subject) =>
-    TRAINING_MODES.flatMap((mode: TrainingMode) => {
+    TRAINING_MODES.flatMap((mode) => {
       const key = `${subject}:${mode}`;
-      return present.has(key) ? [] : [key];
+      return (counts.get(key) ?? 0) > 0
+        ? []
+        : [key];
+    }),
+  );
+}
+
+function coverageShortfalls(
+  examples: Array<{
+    subject: TrainingSubject;
+    mode: TrainingMode;
+  }>,
+  target: number,
+): CoverageShortfall[] {
+  const counts = cellCounts(examples);
+
+  return CORE_SUBJECTS.flatMap((subject) =>
+    TRAINING_MODES.flatMap((mode) => {
+      const cell = `${subject}:${mode}`;
+      const count = counts.get(cell) ?? 0;
+      if (count >= target) {
+        return [];
+      }
+
+      return [
+        {
+          cell,
+          count,
+          missing: target - count,
+          target,
+        },
+      ];
     }),
   );
 }
 
 export function auditTrainingSplit(
   train: TrainingExample[],
-  evaluation: TrainingExample[],
+  evaluation: EvaluationCase[],
   nearThreshold = 0.9,
 ): TrainingSplitAudit {
   const trainIds = new Set(train.map(({ id }) => id));
@@ -111,7 +182,10 @@ export function auditTrainingSplit(
     const evalTokens = tokenSet(evalPrompt.normalized);
 
     for (const trainPrompt of trainPrompts) {
-      if (evalPrompt.normalized === trainPrompt.normalized) {
+      if (
+        evalPrompt.normalized ===
+        trainPrompt.normalized
+      ) {
         exactPromptOverlaps.push({
           evalId: evalPrompt.id,
           similarity: 1,
@@ -120,7 +194,9 @@ export function auditTrainingSplit(
         continue;
       }
 
-      const trainTokens = tokenSet(trainPrompt.normalized);
+      const trainTokens = tokenSet(
+        trainPrompt.normalized,
+      );
       if (
         evalTokens.size < 5 ||
         trainTokens.size < 5
@@ -135,7 +211,9 @@ export function auditTrainingSplit(
       if (similarity >= nearThreshold) {
         nearPromptOverlaps.push({
           evalId: evalPrompt.id,
-          similarity: Number(similarity.toFixed(3)),
+          similarity: Number(
+            similarity.toFixed(3),
+          ),
           trainId: trainPrompt.id,
         });
       }
@@ -145,11 +223,19 @@ export function auditTrainingSplit(
   return {
     evalCount: evaluation.length,
     evalCoverageGaps: coverageGaps(evaluation),
+    evalCoverageShortfalls: coverageShortfalls(
+      evaluation,
+      EVAL_TARGET_PER_CORE_CELL,
+    ),
     exactIdOverlaps,
     exactPromptOverlaps,
     nearPromptOverlaps,
     trainCount: train.length,
     trainCoverageGaps: coverageGaps(train),
+    trainCoverageShortfalls: coverageShortfalls(
+      train,
+      TRAIN_TARGET_PER_CORE_CELL,
+    ),
   };
 }
 
