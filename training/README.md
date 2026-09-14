@@ -80,11 +80,12 @@ npm run training:validate -- training/private-data/train.jsonl
 npm run training:validate -- training/private-data/validation.jsonl
 npm run training:validate-benchmark -- training/private-data/benchmark.jsonl
 npm run training:audit-split -- training/private-data/train.jsonl training/private-data/benchmark.jsonl
+npm run training:topic-coverage -- training/private-data/train.jsonl training/private-data/benchmark.jsonl
 npm run training:plan -- training/private-data/train.jsonl
 npm run verify:private
 ```
 
-Skip the validation command if you are not using a separate SFT validation file. The training-schema validator checks prompt/completion structure, roles, duplicate IDs and metadata. The benchmark validator checks the rubric-based held-out schema and coverage. The split audit checks train-vs-benchmark ID/prompt leakage and subject×mode coverage without printing private prompt text. The training planner estimates token volume, likely 2,048-token truncation, effective batch size and optimizer-step count.
+Skip the validation command if you are not using a separate SFT validation file. The training-schema validator checks prompt/completion structure, roles, duplicate IDs and metadata. The benchmark validator checks the rubric-based held-out schema and coverage. The split audit checks train-vs-benchmark ID/prompt leakage and subject×mode coverage without printing private prompt text. The topic-coverage report shows which leaf IB topic IDs appear directly in the train/benchmark sets and which do not; uncovered topics are a diversity diagnostic, not a requirement to fine-tune every syllabus point. The training planner estimates token volume, likely 2,048-token truncation, effective batch size and optimizer-step count.
 
 Never pass `benchmark.jsonl` to `colab_train.py`; it deliberately has no reference completion.
 
