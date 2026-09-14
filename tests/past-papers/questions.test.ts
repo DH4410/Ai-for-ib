@@ -137,6 +137,26 @@ describe("past-paper question candidates", () => {
     ).toBe("Explain the result. [2]");
   });
 
+  it("does not confuse a normal numbered sentence starting with A for table-style part a", () => {
+    const candidates = extractQuestionCandidates(
+      [
+        {
+          pageNumber: 3,
+          text: "1. A block moves at constant velocity.",
+        },
+      ],
+      "physics-m25-p2",
+    );
+
+    expect(candidates).toEqual([
+      expect.objectContaining({
+        questionNumber: "1",
+        subquestion: undefined,
+        text: "A block moves at constant velocity.",
+      }),
+    ]);
+  });
+
   it("parses compact markscheme-table identifiers", () => {
     const candidates = extractQuestionCandidates(
       [

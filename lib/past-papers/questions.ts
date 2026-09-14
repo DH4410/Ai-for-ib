@@ -81,7 +81,7 @@ function matchQuestion(
   state: MatchState,
 ): QuestionMatch | undefined {
   const numberedRoman = line.match(
-    /^(\d+)[.)]?\s+\(?([a-z])\)?[.)]?\s+\(?((?:i|ii|iii|iv|v|vi|vii|viii|ix|x))\)?[.)]?\s+(.*)$/i,
+    /^(\d+)\s+\(?([a-z])\)?[.)]?\s+\(?((?:i|ii|iii|iv|v|vi|vii|viii|ix|x))\)?[.)]?\s+(.*)$/i,
   );
   if (numberedRoman) {
     const letterPart =
@@ -99,7 +99,7 @@ function matchQuestion(
   }
 
   const numberedLetter = line.match(
-    /^(\d+)[.)]?\s+\(?([a-z])\)?[.)]?\s+(.*)$/i,
+    /^(\d+)\s+\(?([a-z])\)?[.)]?\s+(.*)$/i,
   );
   if (numberedLetter) {
     const letterPart =
@@ -227,7 +227,12 @@ function withContext(
 export function extractQuestionCandidates(
   pages: ExtractedPageInput[],
   documentId: string,
+  options: {
+    inheritParentContext?: boolean;
+  } = {},
 ): QuestionCandidate[] {
+  const inheritParentContext =
+    options.inheritParentContext ?? true;
   const candidates: QuestionCandidate[] = [];
   const candidateIds = new Set<string>();
   let activeQuestionNumber: string | undefined;
@@ -276,8 +281,9 @@ export function extractQuestionCandidates(
         activeLetterCandidate = undefined;
       } else if (match.level === "letter") {
         if (
+          inheritParentContext &&
           activeTopCandidate?.questionNumber ===
-          match.questionNumber
+            match.questionNumber
         ) {
           contextualText = withContext(
             inheritedContext(activeTopCandidate),
@@ -291,8 +297,9 @@ export function extractQuestionCandidates(
           activeLetterPart = match.letterPart;
         }
         if (
+          inheritParentContext &&
           activeLetterCandidate?.questionNumber ===
-          match.questionNumber &&
+            match.questionNumber &&
           activeLetterCandidate.subquestion ===
             match.letterPart
         ) {
@@ -301,8 +308,9 @@ export function extractQuestionCandidates(
             match.text,
           );
         } else if (
+          inheritParentContext &&
           activeTopCandidate?.questionNumber ===
-          match.questionNumber
+            match.questionNumber
         ) {
           contextualText = withContext(
             inheritedContext(activeTopCandidate),
