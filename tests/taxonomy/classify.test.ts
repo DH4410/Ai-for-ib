@@ -59,6 +59,28 @@ describe("IBDP topic classification", () => {
     }
   });
 
+  it("does not let short incidental heading text masquerade as a syllabus heading", () => {
+    for (const title of [
+      "Practice",
+      "Example",
+      "Review",
+      "Paper question",
+      "Problem set",
+    ]) {
+      expect(
+        classifyTopics({
+          subject: "chemistry",
+          text: "General review questions only.",
+          title,
+        }),
+      ).toMatchObject({
+        confidence: 0,
+        method: "unclassified",
+        topicIds: [],
+      });
+    }
+  });
+
   it("uses common Physics aliases and chooses the most specific matching phrase", () => {
     expect(
       classifyTopics({
