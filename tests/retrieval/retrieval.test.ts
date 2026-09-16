@@ -27,8 +27,10 @@ const chemistryChunk = {
 const pairedQuestion = {
   documentId: "physics-m25-p2",
   id: "physics-m25-p2-q4",
-  locator: "May 2025 · HL · P2 · Q4",
+  locator: "May 2025 · TZ2 · HL · P2 · Q4",
   level: "HL" as const,
+  session: "may" as const,
+  timezone: "TZ2",
   marks: 6,
   markschemeText: "Official owned-fixture markscheme text.",
   pairingStatus: "paired" as const,
@@ -82,6 +84,8 @@ describe("study retrieval façade", () => {
         level: "HL",
         paper: "p2",
         realPastPapersOnly: true,
+        session: "may",
+        timezone: "TZ2",
         years: [2025],
       },
       mode: "practice",
@@ -104,6 +108,56 @@ describe("study retrieval façade", () => {
     expect(result[0]?.text).not.toContain(
       "Official owned-fixture markscheme text",
     );
+  });
+
+  it("does not mix sessions or timezones into an exact paper search", async () => {
+    const retrieve = createStudyRetriever({
+      repository: new InMemoryStudySourceRepository(
+        [],
+        [
+          pairedQuestion,
+          {
+            ...pairedQuestion,
+            id: "physics-n25-tz2-p2-q4",
+            locator:
+              "November 2025 · TZ2 · HL · P2 · Q4",
+            session: "november",
+            score: 0.99,
+          },
+          {
+            ...pairedQuestion,
+            id: "physics-m25-tz1-p2-q4",
+            locator:
+              "May 2025 · TZ1 · HL · P2 · Q4",
+            timezone: "TZ1",
+            score: 0.98,
+          },
+        ],
+      ),
+    });
+
+    const result = await retrieve({
+      filters: {
+        level: "HL",
+        paper: "p2",
+        realPastPapersOnly: true,
+        session: "may",
+        timezone: "TZ2",
+        years: [2025],
+      },
+      mode: "practice",
+      query: "thermal energy",
+      subject: "physics",
+    });
+
+    expect(result.map(({ id }) => id)).toEqual([
+      "physics-m25-p2-q4",
+    ]);
+    expect(result[0]).toMatchObject({
+      level: "HL",
+      session: "may",
+      timezone: "TZ2",
+    });
   });
 
   it("does not mix SL questions into an HL paper search", async () => {
