@@ -5,6 +5,7 @@ import unittest
 
 from training.compare_adapter import (
     aggregate_results,
+    classify_case,
     comparison_delta,
     validate_adapter_base,
 )
@@ -71,6 +72,55 @@ class AdapterComparisonHelpersTest(unittest.TestCase):
                 "guardrailPassRate": 0.0,
                 "latencySeconds": 0.5,
             },
+        )
+
+    def test_prioritizes_new_guardrail_failures_and_lower_concept_coverage(self):
+        base = {
+            "conceptCoverage": 0.75,
+            "guardrailsPassed": True,
+        }
+        self.assertEqual(
+            classify_case(
+                base,
+                {
+                    "conceptCoverage": 0.5,
+                    "guardrailsPassed": True,
+                },
+            ),
+            "regression",
+        )
+        self.assertEqual(
+            classify_case(
+                base,
+                {
+                    "conceptCoverage": 1.0,
+                    "guardrailsPassed": False,
+                },
+            ),
+            "regression",
+        )
+        self.assertEqual(
+            classify_case(
+                {
+                    "conceptCoverage": 0.5,
+                    "guardrailsPassed": False,
+                },
+                {
+                    "conceptCoverage": 0.75,
+                    "guardrailsPassed": True,
+                },
+            ),
+            "improvement",
+        )
+        self.assertEqual(
+            classify_case(
+                base,
+                {
+                    "conceptCoverage": 0.75,
+                    "guardrailsPassed": True,
+                },
+            ),
+            "neutral",
         )
 
 
