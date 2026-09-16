@@ -1,4 +1,5 @@
 export type ServerDatabaseKeyEnvironment = {
+  [name: string]: string | undefined;
   SUPABASE_SECRET_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
 };
