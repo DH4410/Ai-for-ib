@@ -61,8 +61,8 @@ export function recordableMarkSuggestion(
       return null;
     }
   } else if (
-    source?.marks !== undefined &&
-    source.marks !== null &&
+    source?.marks === undefined ||
+    source.marks === null ||
     source.marks !== suggestion.maximumMarks
   ) {
     return null;
