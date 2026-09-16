@@ -25,6 +25,12 @@ describe("capability health", () => {
       progress: { configured: true },
       realPastPapers: { configured: true },
       retrieval: { configured: true },
+      readiness: {
+        blockers: [],
+        coreReady: true,
+        fullReady: true,
+        warnings: [],
+      },
       serverDatabaseKey: "secret",
     });
     expect(JSON.stringify(result)).not.toContain(
@@ -46,7 +52,45 @@ describe("capability health", () => {
       },
       progress: { configured: false },
       retrieval: { configured: false },
+      readiness: {
+        blockers: [
+          "self-hosted-model",
+          "private-study-database",
+          "user-auth",
+        ],
+        coreReady: false,
+        fullReady: false,
+        warnings: [
+          "embeddings-not-configured",
+          "mock-model-enabled",
+        ],
+      },
       serverDatabaseKey: "missing",
     });
+  });
+
+  it("treats embeddings as a quality warning and legacy database keys as a migration warning", () => {
+    const result = buildCapabilityHealth({
+      MODEL_BASE_URL: "http://localhost:8000/v1",
+      MODEL_NAME: "Dima-IB-Tutor-v1",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+        "sb_publishable_example",
+      SUPABASE_SERVICE_ROLE_KEY:
+        "legacy-service-role-value",
+      SUPABASE_URL: "https://example.supabase.co",
+    });
+
+    expect(result.readiness).toEqual({
+      blockers: [],
+      coreReady: true,
+      fullReady: false,
+      warnings: [
+        "embeddings-not-configured",
+        "legacy-service-role-key",
+      ],
+    });
+    expect(JSON.stringify(result)).not.toContain(
+      "legacy-service-role-value",
+    );
   });
 });

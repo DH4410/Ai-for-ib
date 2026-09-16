@@ -43,6 +43,12 @@ export type CapabilityHealth = {
   progress: {
     configured: boolean;
   };
+  readiness: {
+    coreReady: boolean;
+    fullReady: boolean;
+    blockers: string[];
+    warnings: string[];
+  };
   serverDatabaseKey: "secret" | "legacy-service-role" | "missing";
 };
 
@@ -58,13 +64,45 @@ export function buildCapabilityHealth(
   const retrievalConfigured =
     isStudyRepositoryConfigured(environment);
   const authConfigured = isUserAuthConfigured(environment);
+  const embeddingsConfigured =
+    isEmbeddingConfigured(environment);
+  const databaseKey = environment.SUPABASE_SECRET_KEY?.trim()
+    ? "secret"
+    : environment.SUPABASE_SERVICE_ROLE_KEY?.trim()
+      ? "legacy-service-role"
+      : "missing";
+  const selfHostedModel =
+    modelConfigured && !mockMode;
+  const blockers = [
+    ...(!selfHostedModel
+      ? ["self-hosted-model"]
+      : []),
+    ...(!retrievalConfigured
+      ? ["private-study-database"]
+      : []),
+    ...(!authConfigured
+      ? ["user-auth"]
+      : []),
+  ];
+  const warnings = [
+    ...(!embeddingsConfigured
+      ? ["embeddings-not-configured"]
+      : []),
+    ...(databaseKey === "legacy-service-role"
+      ? ["legacy-service-role-key"]
+      : []),
+    ...(mockMode
+      ? ["mock-model-enabled"]
+      : []),
+  ];
+  const coreReady = blockers.length === 0;
 
   return {
     auth: {
       configured: authConfigured,
     },
     embeddings: {
-      configured: isEmbeddingConfigured(environment),
+      configured: embeddingsConfigured,
     },
     model: {
       configured: modelConfigured,
@@ -79,17 +117,19 @@ export function buildCapabilityHealth(
       configured:
         authConfigured && retrievalConfigured,
     },
+    readiness: {
+      blockers,
+      coreReady,
+      fullReady: coreReady && embeddingsConfigured,
+      warnings,
+    },
     realPastPapers: {
       configured: retrievalConfigured,
     },
     retrieval: {
       configured: retrievalConfigured,
     },
-    serverDatabaseKey: environment.SUPABASE_SECRET_KEY?.trim()
-      ? "secret"
-      : environment.SUPABASE_SERVICE_ROLE_KEY?.trim()
-        ? "legacy-service-role"
-        : "missing",
+    serverDatabaseKey: databaseKey,
     service: "ai-for-ib",
   };
 }

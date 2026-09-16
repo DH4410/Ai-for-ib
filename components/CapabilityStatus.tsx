@@ -47,6 +47,12 @@ export function CapabilityStatus() {
     );
   }
 
+  const readinessLabel = health.readiness.fullReady
+    ? "Full"
+    : health.readiness.coreReady
+      ? "Core"
+      : "Blocked";
+
   const rows = [
     {
       label: "Tutor model",
@@ -66,6 +72,13 @@ export function CapabilityStatus() {
         : "Not configured",
     },
     {
+      label: "Embeddings",
+      ready: health.embeddings.configured,
+      detail: health.embeddings.configured
+        ? "Configured"
+        : "Lexical only",
+    },
+    {
       label: "Progress",
       ready: health.progress.configured,
       detail: health.progress.configured
@@ -76,7 +89,18 @@ export function CapabilityStatus() {
 
   return (
     <section className="capabilityStatus">
-      <span className="eyebrow">System</span>
+      <div className="capabilityHeader">
+        <span className="eyebrow">System</span>
+        <span
+          className={
+            health.readiness.coreReady
+              ? "readinessBadge ready"
+              : "readinessBadge"
+          }
+        >
+          {readinessLabel}
+        </span>
+      </div>
       {rows.map((row) => (
         <div className="capability" key={row.label}>
           <span
@@ -90,6 +114,19 @@ export function CapabilityStatus() {
           <b>{row.detail}</b>
         </div>
       ))}
+      {!health.readiness.coreReady ? (
+        <p className="readinessDetail">
+          Missing: {health.readiness.blockers.join(", ")}
+        </p>
+      ) : !health.readiness.fullReady ? (
+        <p className="readinessDetail">
+          Core tutor ready · embeddings optional but recommended
+        </p>
+      ) : (
+        <p className="readinessDetail">
+          Private tutor configuration complete
+        </p>
+      )}
     </section>
   );
 }

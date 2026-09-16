@@ -1234,3 +1234,35 @@ button {
   background: rgb(70 123 92 / 9%);
   color: #9fc1aa;
 }
+
+
+.capabilityHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.readinessBadge {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: #8d98a8;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+
+.readinessBadge.ready {
+  border-color: #355747;
+  background: rgb(70 123 92 / 8%);
+  color: #9fc1aa;
+}
+
+.readinessDetail {
+  margin: 6px 0 0;
+  color: #657286;
+  font-size: 9px;
+  line-height: 1.4;
+}
