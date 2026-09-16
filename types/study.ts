@@ -20,6 +20,9 @@ export type SourceChunk = {
   pageEnd?: number | null;
   topicIds?: string[];
   year?: number;
+  level?: "HL" | "SL";
+  session?: "may" | "november";
+  timezone?: string;
   paper?: string;
   questionNumber?: string;
   marks?: number | null;
@@ -48,6 +51,9 @@ export type SourceCitation = Pick<
   | "pageStart"
   | "pageEnd"
   | "year"
+  | "level"
+  | "session"
+  | "timezone"
   | "paper"
   | "questionNumber"
   | "marks"
