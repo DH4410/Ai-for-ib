@@ -68,6 +68,41 @@ describe("marker score footer", () => {
     ).toBeNull();
   });
 
+  it("requires a trusted maximum mark for non-paper work", () => {
+    expect(
+      recordableMarkSuggestion(
+        "Feedback\nMARK: 4/5",
+        undefined,
+      ),
+    ).toBeNull();
+
+    expect(
+      recordableMarkSuggestion(
+        "Feedback\nMARK: 4/5",
+        {
+          documentType: "worksheet",
+          id: "worksheet-q1",
+          title: "Teacher worksheet",
+        },
+      ),
+    ).toBeNull();
+
+    expect(
+      recordableMarkSuggestion(
+        "Feedback\nMARK: 4/5",
+        {
+          documentType: "worksheet",
+          id: "worksheet-q1",
+          marks: 5,
+          title: "Teacher worksheet",
+        },
+      ),
+    ).toEqual({
+      maximumMarks: 5,
+      score: 4,
+    });
+  });
+
   it("ignores impossible or non-final mark strings", () => {
     expect(parseMarkSuggestion("MARK: 3/2")).toBeNull();
     expect(
