@@ -811,8 +811,8 @@ function normalize(text: string): string {
   return text
     .toLocaleLowerCase()
     .replace(/[’']/g, "'")
-    .replace(/[^p{L}p{N}']+/gu, " ")
-    .replace(/s+/g, " ")
+    .replace(/[^\p{L}\p{N}']+/gu, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -877,7 +877,7 @@ function labelWithoutCurriculumPrefix(
 function phraseSpecificity(
   phrase: string,
 ): number {
-  return phrase.replace(/s/g, "").length;
+  return phrase.replace(/\s/g, "").length;
 }
 
 function canonicalHeadingRules(): PhraseRule[] {
