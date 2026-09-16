@@ -27,6 +27,8 @@ export type ChatRequestFilters = {
   questionCount?: number;
   requireMarkscheme?: boolean;
   realPastPapersOnly?: boolean;
+  session?: "may" | "november";
+  timezone?: string;
   topicIds?: string[];
   years?: number[];
 };
@@ -95,6 +97,34 @@ function parseFilters(value: unknown): ChatRequestFilters | undefined {
     }
     filters.level =
       value.level.toUpperCase() as "HL" | "SL";
+  }
+  if (value.session !== undefined) {
+    if (
+      typeof value.session !== "string" ||
+      !["may", "november"].includes(
+        value.session.toLocaleLowerCase(),
+      )
+    ) {
+      return invalid(
+        "filters.session must be may or november",
+      );
+    }
+    filters.session =
+      value.session.toLocaleLowerCase() as
+        | "may"
+        | "november";
+  }
+  if (value.timezone !== undefined) {
+    if (
+      typeof value.timezone !== "string" ||
+      !/^TZ\d{1,2}$/i.test(value.timezone)
+    ) {
+      return invalid(
+        "filters.timezone must look like TZ1, TZ2, or TZ3",
+      );
+    }
+    filters.timezone =
+      value.timezone.toLocaleUpperCase();
   }
   if (value.paper !== undefined) {
     if (typeof value.paper !== "string" || !/^p(?:1a|1b|[123])$/i.test(value.paper)) {
