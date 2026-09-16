@@ -263,6 +263,7 @@ describe("chat API route", () => {
         id: "physics-m25-p2-q4",
         locator: "May 2025 · HL · P2 · Q4",
         marks: 2,
+        markschemeAvailable: false,
         pairingStatus: "paired" as const,
         paper: "p2",
         questionNumber: "4",

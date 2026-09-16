@@ -50,6 +50,8 @@ function toSourceCitation(
     id: source.id,
     locator: source.locator,
     marks: source.marks,
+    markschemeAvailable:
+      source.markschemeAvailable,
     pageEnd: source.pageEnd,
     pageStart: source.pageStart,
     pairingStatus: source.pairingStatus,

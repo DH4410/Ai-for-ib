@@ -100,7 +100,11 @@ create table if not exists private.past_paper_questions (
   question_text text not null,
   markscheme_text text,
   asset_references text[] not null default '{}',
-  pairing_status text not null check (pairing_status in ('paired', 'question_only', 'ambiguous'))
+  pairing_status text not null check (pairing_status in ('paired', 'question_only', 'ambiguous')),
+  check (
+    pairing_status <> 'paired'
+    or markscheme_text is not null
+  )
 );
 
 alter table private.past_paper_questions
@@ -1277,6 +1281,18 @@ begin
       and v_markscheme_document_id is null
   ) then
     raise exception 'paired questions require a markscheme document';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_array_elements(p_questions) question(value)
+    where question.value->>'pairing_status' = 'paired'
+      and nullif(
+        btrim(question.value->>'markscheme_text'),
+        ''
+      ) is null
+  ) then
+    raise exception 'paired questions require non-empty markscheme text';
   end if;
 
   if exists (

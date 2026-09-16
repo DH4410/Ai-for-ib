@@ -25,6 +25,7 @@ describe("marker score footer", () => {
       documentType: "question-paper" as const,
       id: "physics-m25-p2-q4",
       marks: 2,
+      markschemeAvailable: true,
       pairingStatus: "paired" as const,
       title: "Physics May 2025 HL Paper 2",
     };
@@ -45,6 +46,16 @@ describe("marker score footer", () => {
         {
           ...pairedSource,
           pairingStatus: "question_only",
+        },
+      ),
+    ).toBeNull();
+
+    expect(
+      recordableMarkSuggestion(
+        "Feedback\nMARK: 1/2",
+        {
+          ...pairedSource,
+          markschemeAvailable: false,
         },
       ),
     ).toBeNull();

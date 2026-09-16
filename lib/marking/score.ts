@@ -54,6 +54,7 @@ export function recordableMarkSuggestion(
   if (source?.documentType === "question-paper") {
     if (
       source.pairingStatus !== "paired" ||
+      source.markschemeAvailable !== true ||
       source.marks === undefined ||
       source.marks === null ||
       source.marks !== suggestion.maximumMarks

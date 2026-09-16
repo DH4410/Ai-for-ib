@@ -307,6 +307,9 @@ describe("study retrieval façade", () => {
     expect(result[0]?.text).toContain(
       "Official owned-fixture markscheme text",
     );
+    expect(
+      result[0]?.markschemeAvailable,
+    ).toBe(true);
   });
 
   it("filters real practice to paired questions when an official scheme is required", async () => {
@@ -345,5 +348,8 @@ describe("study retrieval façade", () => {
     expect(result[0]?.text).not.toContain(
       "Official markscheme",
     );
+    expect(
+      result[0]?.markschemeAvailable,
+    ).toBe(false);
   });
 });

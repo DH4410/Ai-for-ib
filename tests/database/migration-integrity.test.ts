@@ -104,6 +104,28 @@ describe("Supabase migration integrity", () => {
     );
   });
 
+  it("requires actual markscheme text for paired paper records", async () => {
+    const sql = await migration();
+    const paperIndexFunction = sql.slice(
+      sql.indexOf(
+        "create or replace function public.index_private_past_paper",
+      ),
+      sql.indexOf(
+        "create or replace function public.list_private_study_sources",
+      ),
+    );
+
+    expect(sql).toContain(
+      "pairing_status <> 'paired'",
+    );
+    expect(sql).toContain(
+      "or markscheme_text is not null",
+    );
+    expect(paperIndexFunction).toContain(
+      "paired questions require non-empty markscheme text",
+    );
+  });
+
   it("binds recorded past-paper attempts to the indexed subject, topic and mark total", async () => {
     const sql = await migration();
     const learningFunction = sql.slice(

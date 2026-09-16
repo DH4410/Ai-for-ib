@@ -26,6 +26,7 @@ export type SourceChunk = {
   paper?: string;
   questionNumber?: string;
   marks?: number | null;
+  markschemeAvailable?: boolean;
   pairingStatus?: PastPaperPairingStatus;
 };
 
@@ -57,6 +58,7 @@ export type SourceCitation = Pick<
   | "paper"
   | "questionNumber"
   | "marks"
+  | "markschemeAvailable"
   | "pairingStatus"
 >;
 
