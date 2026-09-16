@@ -72,7 +72,7 @@ export function summarizeSourceReadiness(
   sources: ReadinessSourceRecord[],
   events: ManifestEvent[],
 ): ProjectReadiness["rag"] {
-  const rows = sources.map((source) => {
+  const rows: SourceReadiness[] = sources.map((source) => {
     const sourceEvents = events.filter(
       (event) => event.sourceId === source.id,
     );
