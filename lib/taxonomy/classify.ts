@@ -1,4 +1,7 @@
-import { findIBDPTopic } from "@/lib/taxonomy/ibdp";
+import {
+  IBDP_TOPICS,
+  findIBDPTopic,
+} from "@/lib/taxonomy/ibdp";
 import type { Subject } from "@/types/study";
 
 export type TopicClassificationMethod =
@@ -21,84 +24,893 @@ export type TopicClassificationInput = {
   manualTopicIds?: string[];
 };
 
-type ClassificationRule = {
+type PhraseRule = {
   subject: Subject;
   phrase: string;
   topicId: string;
 };
 
-const CLASSIFICATION_RULES: ClassificationRule[] = [
-  { phrase: "specific latent heat", subject: "physics", topicId: "physics.b.particulate-matter.specific-latent-heat" },
-  { phrase: "a.1 kinematics", subject: "physics", topicId: "physics.a.kinematics" },
-  { phrase: "a.2 forces and momentum", subject: "physics", topicId: "physics.a.forces-momentum" },
-  { phrase: "a.3 work, energy and power", subject: "physics", topicId: "physics.a.work-energy-power" },
-  { phrase: "a.4 rigid body mechanics", subject: "physics", topicId: "physics.a.rigid-body-mechanics" },
-  { phrase: "a.5 galilean and special relativity", subject: "physics", topicId: "physics.a.relativity" },
-  { phrase: "b.1 thermal energy transfers", subject: "physics", topicId: "physics.b.thermal-energy-transfers" },
-  { phrase: "b.2 greenhouse effect", subject: "physics", topicId: "physics.b.greenhouse-effect" },
-  { phrase: "b.3 gas laws", subject: "physics", topicId: "physics.b.gas-laws" },
-  { phrase: "b.4 thermodynamics", subject: "physics", topicId: "physics.b.thermodynamics" },
-  { phrase: "b.5 current and circuits", subject: "physics", topicId: "physics.b.current-circuits" },
-  { phrase: "c.1 simple harmonic motion", subject: "physics", topicId: "physics.c.simple-harmonic-motion" },
-  { phrase: "c.2 wave model", subject: "physics", topicId: "physics.c.wave-model" },
-  { phrase: "c.3 wave phenomena", subject: "physics", topicId: "physics.c.wave-phenomena" },
-  { phrase: "c.4 standing waves and resonance", subject: "physics", topicId: "physics.c.standing-waves-resonance" },
-  { phrase: "c.5 doppler effect", subject: "physics", topicId: "physics.c.doppler-effect" },
-  { phrase: "d.1 gravitational fields", subject: "physics", topicId: "physics.d.gravitational-fields" },
-  { phrase: "d.2 electric and magnetic fields", subject: "physics", topicId: "physics.d.electric-magnetic-fields" },
-  { phrase: "d.3 motion in electromagnetic fields", subject: "physics", topicId: "physics.d.motion-electromagnetic-fields" },
-  { phrase: "d.4 induction", subject: "physics", topicId: "physics.d.induction" },
-  { phrase: "e.1 structure of the atom", subject: "physics", topicId: "physics.e.atomic-structure" },
-  { phrase: "e.2 quantum physics", subject: "physics", topicId: "physics.e.quantum-physics" },
-  { phrase: "e.3 radioactive decay", subject: "physics", topicId: "physics.e.radioactive-decay" },
-  { phrase: "e.4 fission", subject: "physics", topicId: "physics.e.fission" },
-  { phrase: "e.5 fusion and stars", subject: "physics", topicId: "physics.e.fusion-stars" },
+type AliasRule = {
+  subject: Subject;
+  topicId: string;
+  phrases: string[];
+};
 
-  { phrase: "structure 1.1", subject: "chemistry", topicId: "chemistry.structure.models.particulate-introduction" },
-  { phrase: "structure 1.2", subject: "chemistry", topicId: "chemistry.structure.models.nuclear-atom" },
-  { phrase: "structure 1.3", subject: "chemistry", topicId: "chemistry.structure.models.electron-configurations" },
-  { phrase: "structure 1.4", subject: "chemistry", topicId: "chemistry.structure.models.mole" },
-  { phrase: "structure 1.5", subject: "chemistry", topicId: "chemistry.structure.models.ideal-gases" },
-  { phrase: "structure 2.1", subject: "chemistry", topicId: "chemistry.structure.bonding.ionic-model" },
-  { phrase: "structure 2.2", subject: "chemistry", topicId: "chemistry.structure.bonding.covalent-model" },
-  { phrase: "structure 2.3", subject: "chemistry", topicId: "chemistry.structure.bonding.metallic-model" },
-  { phrase: "structure 2.4", subject: "chemistry", topicId: "chemistry.structure.bonding.materials" },
-  { phrase: "structure 3.1", subject: "chemistry", topicId: "chemistry.structure.classification.periodic-table" },
-  { phrase: "structure 3.2", subject: "chemistry", topicId: "chemistry.structure.classification.functional-groups" },
-  { phrase: "reactivity 1.1", subject: "chemistry", topicId: "chemistry.reactivity.driving-reactions.enthalpy" },
-  { phrase: "reactivity 1.2", subject: "chemistry", topicId: "chemistry.reactivity.driving-reactions.energy-cycles" },
-  { phrase: "reactivity 1.3", subject: "chemistry", topicId: "chemistry.reactivity.driving-reactions.fuels" },
-  { phrase: "reactivity 1.4", subject: "chemistry", topicId: "chemistry.reactivity.driving-reactions.entropy-spontaneity" },
-  { phrase: "reactivity 2.1", subject: "chemistry", topicId: "chemistry.reactivity.amount-rate-extent.amount" },
-  { phrase: "reactivity 2.2", subject: "chemistry", topicId: "chemistry.reactivity.amount-rate-extent.rate" },
-  { phrase: "reactivity 2.3", subject: "chemistry", topicId: "chemistry.reactivity.amount-rate-extent.extent" },
-  { phrase: "reactivity 3.1", subject: "chemistry", topicId: "chemistry.reactivity.mechanisms.proton-transfer" },
-  { phrase: "reactivity 3.2", subject: "chemistry", topicId: "chemistry.reactivity.mechanisms.electron-transfer" },
-  { phrase: "reactivity 3.3", subject: "chemistry", topicId: "chemistry.reactivity.mechanisms.electron-sharing" },
-  { phrase: "reactivity 3.4", subject: "chemistry", topicId: "chemistry.reactivity.mechanisms.electron-pair-sharing" },
-  { phrase: "stoichiometry", subject: "chemistry", topicId: "chemistry.reactivity.amount-rate-extent.amount" },
-  { phrase: "ideal gas", subject: "chemistry", topicId: "chemistry.structure.models.ideal-gases" },
+const ALIAS_RULES: AliasRule[] = [
+  {
+    subject: "physics",
+    topicId: "physics.a.kinematics",
+    phrases: [
+      "equations of motion",
+      "displacement time graph",
+      "velocity time graph",
+      "projectile motion",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.a.forces-momentum",
+    phrases: [
+      "newton's laws",
+      "newton s laws",
+      "impulse",
+      "momentum conservation",
+      "free body diagram",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.a.work-energy-power",
+    phrases: [
+      "kinetic energy",
+      "gravitational potential energy",
+      "work done",
+      "efficiency",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.a.rigid-body-mechanics",
+    phrases: [
+      "torque",
+      "moment of inertia",
+      "angular momentum",
+      "rotational equilibrium",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.a.relativity",
+    phrases: [
+      "lorentz factor",
+      "time dilation",
+      "length contraction",
+      "relativistic",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.b.thermal-energy-transfers",
+    phrases: [
+      "specific heat capacity",
+      "thermal equilibrium",
+      "conduction convection radiation",
+      "thermal energy",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.b.particulate-matter.specific-latent-heat",
+    phrases: [
+      "specific latent heat",
+      "latent heat",
+      "state change energy",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.b.greenhouse-effect",
+    phrases: [
+      "greenhouse gases",
+      "infrared absorption",
+      "climate forcing",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.b.gas-laws",
+    phrases: [
+      "ideal gas law",
+      "kinetic model of gases",
+      "boyle's law",
+      "charles's law",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.b.thermodynamics",
+    phrases: [
+      "first law of thermodynamics",
+      "second law of thermodynamics",
+      "entropy",
+      "heat engine",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.b.current-circuits",
+    phrases: [
+      "ohm's law",
+      "kirchhoff",
+      "electrical resistance",
+      "potential divider",
+      "current voltage",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.c.simple-harmonic-motion",
+    phrases: [
+      "simple harmonic",
+      "angular frequency",
+      "mass spring",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.c.wave-model",
+    phrases: [
+      "wave speed",
+      "wavelength frequency",
+      "transverse longitudinal",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.c.wave-phenomena",
+    phrases: [
+      "diffraction",
+      "interference",
+      "refraction",
+      "snell's law",
+      "polarization",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.c.standing-waves-resonance",
+    phrases: [
+      "standing wave",
+      "stationary wave",
+      "nodes antinodes",
+      "resonant frequency",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.c.doppler-effect",
+    phrases: [
+      "doppler shift",
+      "doppler",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.d.gravitational-fields",
+    phrases: [
+      "gravitational field strength",
+      "gravitational potential",
+      "orbital motion",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.d.electric-magnetic-fields",
+    phrases: [
+      "electric field strength",
+      "electric potential",
+      "magnetic field strength",
+      "coulomb's law",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.d.motion-electromagnetic-fields",
+    phrases: [
+      "charged particle in a magnetic field",
+      "charged particle in an electric field",
+      "velocity selector",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.d.induction",
+    phrases: [
+      "faraday's law",
+      "lenz's law",
+      "electromagnetic induction",
+      "magnetic flux",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.e.atomic-structure",
+    phrases: [
+      "atomic spectra",
+      "rutherford scattering",
+      "energy levels",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.e.quantum-physics",
+    phrases: [
+      "photoelectric effect",
+      "de broglie",
+      "wave particle duality",
+      "quantum",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.e.radioactive-decay",
+    phrases: [
+      "half life",
+      "radioactive decay",
+      "decay constant",
+      "activity",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.e.fission",
+    phrases: [
+      "nuclear fission",
+      "chain reaction",
+      "binding energy",
+    ],
+  },
+  {
+    subject: "physics",
+    topicId: "physics.e.fusion-stars",
+    phrases: [
+      "nuclear fusion",
+      "stellar fusion",
+      "hertzsprung russell",
+      "main sequence star",
+    ],
+  },
 
-  { phrase: "arithmetic sequence", subject: "mathematics", topicId: "mathematics.number-algebra.sequences-series" },
-  { phrase: "geometric sequence", subject: "mathematics", topicId: "mathematics.number-algebra.sequences-series" },
-  { phrase: "exponents", subject: "mathematics", topicId: "mathematics.number-algebra.exponents-logarithms" },
-  { phrase: "logarithms", subject: "mathematics", topicId: "mathematics.number-algebra.exponents-logarithms" },
-  { phrase: "complex numbers", subject: "mathematics", topicId: "mathematics.number-algebra.complex-numbers" },
-  { phrase: "partial fractions", subject: "mathematics", topicId: "mathematics.number-algebra.partial-fractions" },
-  { phrase: "inverse functions", subject: "mathematics", topicId: "mathematics.functions.domain-range-inverses" },
-  { phrase: "function transformations", subject: "mathematics", topicId: "mathematics.functions.graphs-transformations" },
-  { phrase: "quadratic functions", subject: "mathematics", topicId: "mathematics.functions.quadratics" },
-  { phrase: "exponential functions", subject: "mathematics", topicId: "mathematics.functions.exponential-logarithmic" },
-  { phrase: "trigonometry", subject: "mathematics", topicId: "mathematics.geometry-trigonometry.trigonometry" },
-  { phrase: "vectors", subject: "mathematics", topicId: "mathematics.geometry-trigonometry.vectors" },
-  { phrase: "probability distributions", subject: "mathematics", topicId: "mathematics.statistics-probability.distributions" },
-  { phrase: "differentiation", subject: "mathematics", topicId: "mathematics.calculus.differentiation" },
-  { phrase: "integration", subject: "mathematics", topicId: "mathematics.calculus.integration" },
-  { phrase: "differential equations", subject: "mathematics", topicId: "mathematics.calculus.differential-equations" },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.models.particulate-introduction",
+    phrases: [
+      "pure substance",
+      "mixture",
+      "homogeneous mixture",
+      "heterogeneous mixture",
+      "particulate nature of matter",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.models.nuclear-atom",
+    phrases: [
+      "isotope",
+      "mass spectrometry",
+      "mass spectrum",
+      "proton neutron electron",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.models.electron-configurations",
+    phrases: [
+      "electron configuration",
+      "atomic orbital",
+      "aufbau",
+      "ionization energy",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.models.mole",
+    phrases: [
+      "avogadro constant",
+      "molar mass",
+      "empirical formula",
+      "molecular formula",
+      "mole ratio",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.models.ideal-gases",
+    phrases: [
+      "ideal gas",
+      "molar volume",
+      "gas equation",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.bonding.ionic-model",
+    phrases: [
+      "ionic bond",
+      "ionic lattice",
+      "lattice enthalpy",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.bonding.covalent-model",
+    phrases: [
+      "covalent bond",
+      "lewis structure",
+      "vsepr",
+      "molecular geometry",
+      "formal charge",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.bonding.metallic-model",
+    phrases: [
+      "metallic bond",
+      "delocalized electrons",
+      "metal lattice",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.bonding.materials",
+    phrases: [
+      "intermolecular forces",
+      "hydrogen bonding",
+      "van der waals",
+      "allotrope",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.classification.periodic-table",
+    phrases: [
+      "periodic trend",
+      "periodicity",
+      "electronegativity",
+      "atomic radius",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.structure.classification.functional-groups",
+    phrases: [
+      "functional group",
+      "homologous series",
+      "organic nomenclature",
+      "structural isomer",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.driving-reactions.enthalpy",
+    phrases: [
+      "enthalpy change",
+      "calorimetry",
+      "bond enthalpy",
+      "standard enthalpy",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.driving-reactions.energy-cycles",
+    phrases: [
+      "hess's law",
+      "hess law",
+      "born haber",
+      "energy cycle",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.driving-reactions.fuels",
+    phrases: [
+      "fuel combustion",
+      "combustion of fuels",
+      "biofuel",
+      "fuel cell",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.driving-reactions.entropy-spontaneity",
+    phrases: [
+      "entropy change",
+      "gibbs free energy",
+      "spontaneous reaction",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.amount-rate-extent.amount",
+    phrases: [
+      "stoichiometry",
+      "limiting reagent",
+      "percentage yield",
+      "atom economy",
+      "titration calculation",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.amount-rate-extent.rate",
+    phrases: [
+      "collision theory",
+      "reaction rate",
+      "activation energy",
+      "rate constant",
+      "arrhenius",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.amount-rate-extent.extent",
+    phrases: [
+      "chemical equilibrium",
+      "equilibrium constant",
+      "le chatelier",
+      "reaction quotient",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.mechanisms.proton-transfer",
+    phrases: [
+      "acid base",
+      "bronsted lowry",
+      "ph calculation",
+      "buffer solution",
+      "acid dissociation",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.mechanisms.electron-transfer",
+    phrases: [
+      "redox reaction",
+      "oxidation number",
+      "electrochemical cell",
+      "electrolysis",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.mechanisms.electron-sharing",
+    phrases: [
+      "free radical",
+      "radical substitution",
+      "homolytic fission",
+    ],
+  },
+  {
+    subject: "chemistry",
+    topicId:
+      "chemistry.reactivity.mechanisms.electron-pair-sharing",
+    phrases: [
+      "nucleophile",
+      "electrophile",
+      "heterolytic fission",
+      "curly arrow",
+    ],
+  },
+
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.number-algebra.sequences-series",
+    phrases: [
+      "arithmetic sequence",
+      "geometric sequence",
+      "arithmetic series",
+      "geometric series",
+      "sigma notation",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.number-algebra.exponents-logarithms",
+    phrases: [
+      "laws of indices",
+      "exponential equation",
+      "logarithmic equation",
+      "log laws",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.number-algebra.proof",
+    phrases: [
+      "proof by induction",
+      "proof by contradiction",
+      "counterexample",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.number-algebra.binomial-counting",
+    phrases: [
+      "binomial theorem",
+      "binomial expansion",
+      "permutation combination",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.number-algebra.complex-numbers",
+    phrases: [
+      "complex plane",
+      "argand diagram",
+      "de moivre",
+      "modulus argument",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.number-algebra.linear-systems",
+    phrases: [
+      "simultaneous linear equations",
+      "gaussian elimination",
+      "system of linear equations",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.number-algebra.partial-fractions",
+    phrases: [
+      "partial fraction decomposition",
+      "partial fractions",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId: "mathematics.functions.lines",
+    phrases: [
+      "straight line",
+      "gradient intercept",
+      "perpendicular bisector",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.functions.domain-range-inverses",
+    phrases: [
+      "domain and range",
+      "inverse function",
+      "composite function",
+      "one to one function",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.functions.graphs-transformations",
+    phrases: [
+      "function transformation",
+      "graph transformation",
+      "translation reflection stretch",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId: "mathematics.functions.quadratics",
+    phrases: [
+      "quadratic function",
+      "discriminant",
+      "vertex form",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.functions.exponential-logarithmic",
+    phrases: [
+      "exponential function",
+      "logarithmic function",
+      "exponential model",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.functions.polynomial-rational",
+    phrases: [
+      "polynomial function",
+      "rational function",
+      "asymptote",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.functions.equations-inequalities",
+    phrases: [
+      "equation inequality",
+      "inequality",
+      "roots of an equation",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.geometry-trigonometry.trigonometry",
+    phrases: [
+      "sine rule",
+      "cosine rule",
+      "trigonometric identity",
+      "radian",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.geometry-trigonometry.vectors",
+    phrases: [
+      "vector equation",
+      "scalar product",
+      "dot product",
+      "cross product",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.geometry-trigonometry.geometry",
+    phrases: [
+      "circle theorem",
+      "voronoi",
+      "three dimensional geometry",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.statistics-probability.descriptive-statistics",
+    phrases: [
+      "box plot",
+      "standard deviation",
+      "interquartile range",
+      "correlation coefficient",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.statistics-probability.probability",
+    phrases: [
+      "conditional probability",
+      "bayes theorem",
+      "probability tree",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.statistics-probability.distributions",
+    phrases: [
+      "binomial distribution",
+      "normal distribution",
+      "poisson distribution",
+      "expected value",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.statistics-probability.sampling-testing",
+    phrases: [
+      "hypothesis test",
+      "significance level",
+      "confidence interval",
+      "chi squared",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId: "mathematics.calculus.limits",
+    phrases: [
+      "limit of a function",
+      "continuity",
+      "l'hopital",
+      "l hopital",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.calculus.differentiation",
+    phrases: [
+      "differentiate",
+      "derivative",
+      "chain rule",
+      "product rule",
+      "quotient rule",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.calculus.differentiation-applications",
+    phrases: [
+      "optimization",
+      "stationary point",
+      "related rates",
+      "tangent normal",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.calculus.integration",
+    phrases: [
+      "integrate",
+      "definite integral",
+      "integration by parts",
+      "substitution integration",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId:
+      "mathematics.calculus.differential-equations",
+    phrases: [
+      "differential equation",
+      "separation of variables",
+      "euler method",
+    ],
+  },
+  {
+    subject: "mathematics",
+    topicId: "mathematics.calculus.series",
+    phrases: [
+      "maclaurin series",
+      "taylor series",
+      "power series",
+    ],
+  },
 ];
 
 function normalize(text: string): string {
-  return text.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  return text
+    .toLocaleLowerCase()
+    .replace(/[’']/g, "'")
+    .replace(/[^p{L}p{N}']+/gu, " ")
+    .replace(/s+/g, " ")
+    .trim();
+}
+
+function labelWithoutCurriculumPrefix(
+  label: string,
+): string {
+  return label
+    .replace(
+      /^(?:themes+[a-e]:s*|[a-e].d+s+|structures+d+(?:.d+)?:?s*|reactivitys+d+(?:.d+)?:?s*|topics+d+:s*)/i,
+      "",
+    )
+    .trim();
+}
+
+function phraseSpecificity(
+  phrase: string,
+): number {
+  return phrase.replace(/s/g, "").length;
+}
+
+function canonicalHeadingRules(): PhraseRule[] {
+  return IBDP_TOPICS.flatMap((topic) => {
+    const full = normalize(topic.label);
+    const simplified = normalize(
+      labelWithoutCurriculumPrefix(topic.label),
+    );
+
+    return [
+      {
+        phrase: full,
+        subject: topic.subject,
+        topicId: topic.id,
+      },
+      ...(simplified && simplified !== full
+        ? [
+            {
+              phrase: simplified,
+              subject: topic.subject,
+              topicId: topic.id,
+            },
+          ]
+        : []),
+    ];
+  });
+}
+
+const HEADING_RULES =
+  canonicalHeadingRules();
+
+const KEYWORD_RULES: PhraseRule[] =
+  ALIAS_RULES.flatMap((rule) =>
+    rule.phrases.map((phrase) => ({
+      phrase: normalize(phrase),
+      subject: rule.subject,
+      topicId: rule.topicId,
+    })),
+  );
+
+function headingMatches(
+  heading: string,
+  phrase: string,
+): boolean {
+  const tokenCount =
+    phrase.split(" ").filter(Boolean).length;
+  const specific =
+    tokenCount >= 2 ||
+    phraseSpecificity(phrase) >= 9;
+
+  return specific
+    ? heading.includes(phrase)
+    : heading === phrase;
+}
+
+function bestRule(
+  rules: PhraseRule[],
+  subject: Subject,
+  haystack: string,
+  matcher: (
+    haystack: string,
+    phrase: string,
+  ) => boolean,
+): PhraseRule | undefined {
+  return rules
+    .filter(
+      (rule) =>
+        rule.subject === subject &&
+        matcher(haystack, rule.phrase),
+    )
+    .sort(
+      (left, right) =>
+        phraseSpecificity(right.phrase) -
+          phraseSpecificity(left.phrase) ||
+        right.phrase.length -
+          left.phrase.length ||
+        left.topicId.localeCompare(
+          right.topicId,
+        ),
+    )[0];
 }
 
 function reasonFor(
@@ -114,50 +926,59 @@ export function classifyTopics(
   const manualTopicIds =
     input.manualTopicIds?.filter(
       (topicId) =>
-        findIBDPTopic(topicId)?.subject === input.subject,
+        findIBDPTopic(topicId)?.subject ===
+        input.subject,
     ) ?? [];
   if (manualTopicIds.length > 0) {
     return {
       confidence: 1,
       method: "manual_metadata",
-      reason: "Used trusted source metadata.",
-      topicIds: [...new Set(manualTopicIds)],
+      reason:
+        "Used trusted source metadata.",
+      topicIds: [
+        ...new Set(manualTopicIds),
+      ],
     };
   }
 
   const heading = normalize(input.title);
-  const matchingHeadingRule = CLASSIFICATION_RULES.find(
-    (rule) =>
-      rule.subject === input.subject &&
-      heading.includes(rule.phrase),
+  const headingRule = bestRule(
+    HEADING_RULES,
+    input.subject,
+    heading,
+    headingMatches,
   );
-  if (matchingHeadingRule) {
+  if (headingRule) {
     return {
       confidence: 0.98,
       method: "heading_rule",
       reason: reasonFor(
-        matchingHeadingRule.phrase,
+        headingRule.phrase,
         "heading",
       ),
-      topicIds: [matchingHeadingRule.topicId],
+      topicIds: [headingRule.topicId],
     };
   }
 
-  const searchableText = `${heading} ${normalize(input.text)}`;
-  const matchingKeywordRule = CLASSIFICATION_RULES.find(
-    (rule) =>
-      rule.subject === input.subject &&
-      searchableText.includes(rule.phrase),
+  const searchableText = normalize(
+    `${input.title} ${input.text}`,
   );
-  if (matchingKeywordRule) {
+  const keywordRule = bestRule(
+    KEYWORD_RULES,
+    input.subject,
+    searchableText,
+    (text, phrase) =>
+      text.includes(phrase),
+  );
+  if (keywordRule) {
     return {
-      confidence: 0.72,
+      confidence: 0.76,
       method: "keyword_rule",
       reason: reasonFor(
-        matchingKeywordRule.phrase,
+        keywordRule.phrase,
         "keyword",
       ),
-      topicIds: [matchingKeywordRule.topicId],
+      topicIds: [keywordRule.topicId],
     };
   }
 
@@ -165,7 +986,7 @@ export function classifyTopics(
     confidence: 0,
     method: "unclassified",
     reason:
-      "No trusted metadata, heading rule, or keyword rule matched.",
+      "No trusted metadata, canonical heading, or supported keyword alias matched.",
     topicIds: [],
   };
 }
