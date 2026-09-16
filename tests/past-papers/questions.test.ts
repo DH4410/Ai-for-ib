@@ -116,6 +116,47 @@ describe("past-paper question candidates", () => {
     expect(romanTwo?.marks).toBe(2);
   });
 
+  it("extends inherited subquestion provenance to the parent context page", () => {
+    const candidates = extractQuestionCandidates(
+      [
+        {
+          pageNumber: 6,
+          text: [
+            "1. A block is heated at constant power.",
+            "The mass of the block is 0.50 kg.",
+          ].join("\n"),
+        },
+        {
+          pageNumber: 7,
+          text: [
+            "(a) The temperature rises steadily.",
+            "(i) State the energy transfer involved. [1]",
+          ].join("\n"),
+        },
+      ],
+      "physics-m25-p2",
+    );
+
+    expect(
+      candidates.find(
+        ({ subquestion }) =>
+          subquestion === "a",
+      ),
+    ).toMatchObject({
+      pageStart: 6,
+      pageEnd: 7,
+    });
+    expect(
+      candidates.find(
+        ({ subquestion }) =>
+          subquestion === "a.i",
+      ),
+    ).toMatchObject({
+      pageStart: 6,
+      pageEnd: 7,
+    });
+  });
+
   it("does not prepend an independent top-level command to later letter parts", () => {
     const candidates = extractQuestionCandidates(
       [

@@ -93,6 +93,8 @@ create table if not exists private.past_paper_questions (
   paper text not null,
   question_number text not null,
   subquestion text,
+  page_start integer not null check (page_start > 0),
+  page_end integer not null check (page_end >= page_start),
   marks integer check (marks >= 0),
   command_terms text[] not null default '{}',
   question_text text not null,
@@ -649,6 +651,8 @@ returns table (
   year integer,
   paper text,
   question_number text,
+  page_start integer,
+  page_end integer,
   marks integer,
   pairing_status text,
   score real
@@ -684,6 +688,8 @@ as $$
     question.year,
     question.paper,
     question.question_number,
+    question.page_start,
+    question.page_end,
     question.marks,
     question.pairing_status,
     ts_rank(
@@ -766,6 +772,8 @@ returns table (
   year integer,
   paper text,
   question_number text,
+  page_start integer,
+  page_end integer,
   marks integer,
   pairing_status text,
   score real
@@ -802,6 +810,8 @@ as $$
     question.year,
     question.paper,
     question.question_number,
+    question.page_start,
+    question.page_end,
     question.marks,
     question.pairing_status,
     1::real as score
@@ -1246,6 +1256,8 @@ begin
     paper,
     question_number,
     subquestion,
+    page_start,
+    page_end,
     marks,
     command_terms,
     question_text,
@@ -1270,6 +1282,8 @@ begin
     lower(question.value->>'paper'),
     question.value->>'question_number',
     nullif(question.value->>'subquestion', ''),
+    (question.value->>'page_start')::integer,
+    (question.value->>'page_end')::integer,
     nullif(question.value->>'marks', '')::integer,
     array(
       select jsonb_array_elements_text(

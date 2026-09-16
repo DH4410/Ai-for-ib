@@ -55,6 +55,8 @@ export type StoredPastPaperQuestion = {
   paper: string;
   questionNumber: string;
   marks: number | null;
+  pageStart?: number;
+  pageEnd?: number;
   pairingStatus: "paired" | "question_only" | "ambiguous";
   score?: number;
 };
@@ -268,6 +270,8 @@ type RpcPastPaperRow = {
   paper: string;
   question_number: string;
   marks: number | null;
+  page_start: number;
+  page_end: number;
   pairing_status: "paired" | "question_only" | "ambiguous";
   score: number;
 };
@@ -307,6 +311,8 @@ function toRankedPastPaperQuestion(
     session: row.session,
     timezone: row.timezone,
     markschemeText: row.markscheme_text,
+    pageEnd: row.page_end,
+    pageStart: row.page_start,
     pairingStatus: row.pairing_status,
     paper: row.paper,
     questionNumber: row.question_number,

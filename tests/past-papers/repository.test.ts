@@ -96,6 +96,8 @@ describe("past-paper index repository", () => {
           marks: 2,
           markschemeText: "Award 2 marks.",
           pairingStatus: "paired",
+          pageEnd: 4,
+          pageStart: 4,
           paper: "p2",
           questionNumber: "1",
           questionText: "Calculate the value. [2]",
@@ -116,13 +118,17 @@ describe("past-paper index repository", () => {
     expect(called?.name).toBe(
       "index_private_past_paper",
     );
-    expect(
-      (
-        called?.parameters.p_questions as Array<
-          Record<string, unknown>
-        >
-      )[0]?.topic_ids,
-    ).toEqual([
+    const payload = (
+      called?.parameters.p_questions as Array<
+        Record<string, unknown>
+      >
+    )[0];
+
+    expect(payload).toMatchObject({
+      page_end: 4,
+      page_start: 4,
+    });
+    expect(payload?.topic_ids).toEqual([
       "physics.b.particulate-matter.specific-latent-heat",
       "physics.b.thermal-energy-transfers",
       "physics.b.particulate-matter",

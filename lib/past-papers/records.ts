@@ -21,6 +21,8 @@ export type StructuredPastPaperQuestion = {
   paper: string;
   questionNumber: string;
   subquestion?: string;
+  pageStart: number;
+  pageEnd: number;
   marks?: number;
   commandTerms: string[];
   questionText: string;
@@ -202,6 +204,8 @@ export function buildPastPaperQuestionRecords(args: {
         ? "paired"
         : "question_only",
       paper: args.questionDocument.paper,
+      pageEnd: candidate.pageEnd,
+      pageStart: candidate.pageStart,
       questionNumber: candidate.questionNumber,
       questionText: candidate.text,
       session: args.questionDocument.session,

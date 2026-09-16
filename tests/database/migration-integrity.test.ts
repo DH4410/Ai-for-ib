@@ -62,6 +62,23 @@ describe("Supabase migration integrity", () => {
     );
   });
 
+  it("preserves past-paper question page provenance", async () => {
+    const sql = await migration();
+
+    expect(sql).toContain(
+      "page_start integer not null check (page_start > 0)",
+    );
+    expect(sql).toContain(
+      "page_end integer not null check (page_end >= page_start)",
+    );
+    expect(sql).toContain(
+      "(question.value->>'page_start')::integer",
+    );
+    expect(sql).toContain(
+      "(question.value->>'page_end')::integer",
+    );
+  });
+
   it("returns full paper identity fields for exact-question marking", async () => {
     const sql = await migration();
     const exactQuestion = sql.slice(

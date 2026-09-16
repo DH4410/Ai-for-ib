@@ -166,6 +166,8 @@ export class SupabasePastPaperIndexRepository {
           marks: question.marks ?? null,
           markscheme_text: question.markschemeText,
           pairing_status: question.pairingStatus,
+          page_end: question.pageEnd,
+          page_start: question.pageStart,
           paper: question.paper,
           question_number: question.questionNumber,
           question_text: question.questionText,

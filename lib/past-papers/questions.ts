@@ -275,6 +275,7 @@ export function extractQuestionCandidates(
       activeQuestionNumber = match.questionNumber;
 
       let contextualText = match.text;
+      let contextualPageStart = page.pageNumber;
       if (match.level === "top") {
         activeLetterPart = undefined;
         activeRomanPart = undefined;
@@ -288,6 +289,10 @@ export function extractQuestionCandidates(
           contextualText = withContext(
             inheritedContext(activeTopCandidate),
             match.text,
+          );
+          contextualPageStart = Math.min(
+            contextualPageStart,
+            activeTopCandidate.pageStart,
           );
         }
         activeLetterPart = match.letterPart;
@@ -307,6 +312,10 @@ export function extractQuestionCandidates(
             inheritedContext(activeLetterCandidate),
             match.text,
           );
+          contextualPageStart = Math.min(
+            contextualPageStart,
+            activeLetterCandidate.pageStart,
+          );
         } else if (
           inheritParentContext &&
           activeTopCandidate?.questionNumber ===
@@ -315,6 +324,10 @@ export function extractQuestionCandidates(
           contextualText = withContext(
             inheritedContext(activeTopCandidate),
             match.text,
+          );
+          contextualPageStart = Math.min(
+            contextualPageStart,
+            activeTopCandidate.pageStart,
           );
         }
         activeRomanPart = match.romanPart;
@@ -332,7 +345,7 @@ export function extractQuestionCandidates(
         id,
         marks: extractVisibleMarks(line),
         pageEnd: page.pageNumber,
-        pageStart: page.pageNumber,
+        pageStart: contextualPageStart,
         questionNumber: match.questionNumber,
         subquestion: match.subquestion,
         text: contextualText,

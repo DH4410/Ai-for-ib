@@ -88,6 +88,8 @@ function toPastPaperSourceChunk(
     locator: question.locator,
     marks: question.marks,
     level: question.level,
+    pageEnd: question.pageEnd,
+    pageStart: question.pageStart,
     pairingStatus: question.pairingStatus,
     paper: question.paper,
     questionNumber: question.questionNumber,

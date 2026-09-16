@@ -54,6 +54,8 @@ describe("structured past-paper records", () => {
         id: "physics-m25-hl-tz2-p2-qp-q1",
         markschemeText:
           "Accept energy transferred during a state change.",
+        pageEnd: 3,
+        pageStart: 3,
         pairingStatus: "paired",
         questionNumber: "1",
       }),
@@ -63,6 +65,8 @@ describe("structured past-paper records", () => {
         marks: 2,
         markschemeText:
           "Award for use of latent heat. [2]",
+        pageEnd: 3,
+        pageStart: 3,
         pairingStatus: "paired",
         questionNumber: "1",
         subquestion: "a",
