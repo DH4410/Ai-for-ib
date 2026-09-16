@@ -20,7 +20,10 @@ AI for IB is a private, standalone tutor for **IB Physics, Chemistry and Mathema
 - Private PDF materialization, checksums, page-aware extraction, OCR-required detection, chunking and topic classification.
 - One-command private textbook indexing and one-command authorized local past-paper indexing.
 - A **ManageBac resource bridge** through the companion `DH4410/managebac-mcp` server: discover class files, download a previously discovered resource into ignored local storage, then hand only the local path to AI-for-IB ingestion.
-- Colab-ready QLoRA training, base-vs-candidate evaluation, and a sequential 4-bit benchmark for Qwen3-4B, Qwen3-8B and Phi-4-mini-instruct.
+- Colab-ready QLoRA training with a guided notebook, GPU/stack preflight, deterministic SFT train/validation splitting, held-out benchmark leakage checks, token/step planning and syllabus-diversity diagnostics.
+- Sequential 4-bit base-model benchmarking for Qwen3-4B-Instruct-2507, Qwen3-8B and Phi-4-mini-instruct, plus direct base-vs-LoRA adapter comparison.
+- Conservative adapter promotion gating: mechanical regressions are surfaced first and a private side-by-side human-review page is required for correctness, pedagogy and IB relevance checks.
+- Safe project-readiness reporting for source ingestion/indexing, OCR-required pages and private training/benchmark inputs.
 - CI for the private-data boundary, tests, TypeScript, Python syntax and production build.
 
 ## Architecture
@@ -99,7 +102,7 @@ Once private study sources are configured, user authentication is required befor
 
 ## Private study material
 
-Licensed textbooks, papers, markschemes, extracted text, page images, training/evaluation data, model weights and credentials must never be committed to this public repository.
+Licensed textbooks, papers, markschemes, extracted text, page images, private training/validation/benchmark data, model weights and credentials must never be committed to this public repository.
 
 Relevant ignored paths include:
 
@@ -119,11 +122,19 @@ Before committing:
 npm run verify:private
 ```
 
+Once private inputs exist, a metadata-only readiness report is available with:
+
+```bash
+npm run project:readiness
+```
+
+For model work, use the guided `training/AI_for_IB_Colab.ipynb` notebook rather than assembling the training commands manually.
+
 See `docs/INGESTION.md`, `docs/PAST_PAPERS.md` and `training/README.md` for the operational workflows.
 
 ## What still requires real private inputs/infrastructure
 
-The code path is built, but the repository intentionally does not contain the user's licensed PDFs, real past-paper text, private training/evaluation datasets, Supabase credentials, or model weights. To make the tutor fully useful, those must be supplied through the authorized private workflows and the selected model must be benchmarked/deployed.
+The code path is built, but the repository intentionally does not contain the user's licensed PDFs, real past-paper text, private behavior-training/validation/benchmark datasets, Supabase credentials, or model weights. To make the tutor fully useful, those must be supplied through the authorized private workflows and the selected model must be benchmarked, fine-tuned only if it helps, reviewed, and deployed.
 
 
 ## ManageBac class-file handoff
