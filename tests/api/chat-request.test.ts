@@ -17,6 +17,8 @@ describe("chat request validation", () => {
           paper: "p2",
           questionCount: 3,
           requireMarkscheme: true,
+          session: "May",
+          timezone: "tz2",
           realPastPapersOnly: true,
           years: [2022, 2025],
         },
@@ -29,6 +31,8 @@ describe("chat request validation", () => {
       paper: "p2",
       questionCount: 3,
       requireMarkscheme: true,
+      session: "may",
+      timezone: "TZ2",
       realPastPapersOnly: true,
       years: [2022, 2025],
     });
@@ -43,6 +47,30 @@ describe("chat request validation", () => {
         subject: "physics",
       }),
     ).toThrow("filters.level must be HL or SL");
+  });
+
+  it("rejects unsupported past-paper session and timezone filters", () => {
+    expect(() =>
+      parseChatRequest({
+        filters: { session: "winter" },
+        message: "Give questions",
+        mode: "practice",
+        subject: "physics",
+      }),
+    ).toThrow(
+      "filters.session must be may or november",
+    );
+
+    expect(() =>
+      parseChatRequest({
+        filters: { timezone: "Europe/Amsterdam" },
+        message: "Give questions",
+        mode: "practice",
+        subject: "physics",
+      }),
+    ).toThrow(
+      "filters.timezone must look like TZ1, TZ2, or TZ3",
+    );
   });
 
   it("keeps an exact real-paper question id for marking continuity", () => {
