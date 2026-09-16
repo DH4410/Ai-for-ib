@@ -41,7 +41,6 @@ export function stripMarkSuggestion(
   return text.replace(MARK_FOOTER, "").trimEnd();
 }
 
-
 export function recordableMarkSuggestion(
   text: string,
   source: SourceCitation | undefined,
@@ -70,4 +69,18 @@ export function recordableMarkSuggestion(
   }
 
   return suggestion;
+}
+
+export function sanitizeMarkAnswer(
+  text: string,
+  source: SourceCitation | undefined,
+): string {
+  const suggestion = parseMarkSuggestion(text);
+  if (!suggestion) {
+    return text;
+  }
+
+  return recordableMarkSuggestion(text, source)
+    ? text
+    : stripMarkSuggestion(text);
 }
