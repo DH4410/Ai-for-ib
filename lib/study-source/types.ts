@@ -65,9 +65,11 @@ export type FailedEvent = ManifestEventBase & {
 export type IngestedEvent = ManifestEventBase & {
   eventType: "ingested";
   chunkCount: number;
+  classifiedChunkCount?: number;
   failedPageCount: number;
   ocrRequiredPageCount: number;
   pageCount: number;
+  unclassifiedChunkCount?: number;
 };
 
 export type IndexedEvent = ManifestEventBase & {

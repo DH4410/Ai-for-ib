@@ -111,6 +111,18 @@ function assertManifestEvent(value: unknown): asserts value is ManifestEvent {
       return;
     case "ingested":
       assertNonNegativeInteger(value, "chunkCount");
+      if (value.classifiedChunkCount !== undefined) {
+        assertNonNegativeInteger(
+          value,
+          "classifiedChunkCount",
+        );
+      }
+      if (value.unclassifiedChunkCount !== undefined) {
+        assertNonNegativeInteger(
+          value,
+          "unclassifiedChunkCount",
+        );
+      }
       assertNonNegativeInteger(value, "failedPageCount");
       assertNonNegativeInteger(value, "ocrRequiredPageCount");
       assertNonNegativeInteger(value, "pageCount");

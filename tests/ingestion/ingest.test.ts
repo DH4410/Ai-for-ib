@@ -81,15 +81,20 @@ describe("local source ingestion", () => {
     expect(chunkArtifact.chunks[0]?.text).not.toContain("too short to trust");
     expect(report).toMatchObject({
       chunkCount: 1,
+      classifiedChunkCount: 1,
+      classificationCoverage: 1,
       ocrRequiredPageCount: 1,
       pageCount: 2,
       sourceId: "physics-oxford-2023",
+      unclassifiedChunkCount: 0,
     });
     expect(report).not.toHaveProperty("pages");
     expect((await readManifestEvents(join(directory, "source-manifest.jsonl"))).at(-1)).toMatchObject({
       chunkCount: 1,
+      classifiedChunkCount: 1,
       eventType: "ingested",
       ocrRequiredPageCount: 1,
+      unclassifiedChunkCount: 0,
     });
   });
 });

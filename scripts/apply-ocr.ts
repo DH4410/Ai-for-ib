@@ -283,6 +283,16 @@ async function main(): Promise<void> {
       checksumSha256,
     );
 
+  const classifiedChunkCount = chunks.filter(
+    ({ topicIds }) => topicIds.length > 0,
+  ).length;
+  const unclassifiedChunkCount =
+    chunks.length - classifiedChunkCount;
+  const classificationCoverage =
+    chunks.length === 0
+      ? 0
+      : classifiedChunkCount / chunks.length;
+
   const remainingOcrRequiredPageCount =
     pages.filter(
       ({ extractionMethod }) =>
@@ -320,6 +330,8 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         chunkCount: chunks.length,
+        classifiedChunkCount,
+        classificationCoverage,
         documentType:
           source.documentType,
         materializationStatus:
@@ -331,6 +343,7 @@ async function main(): Promise<void> {
         pageCount: pages.length,
         sourceId: source.id,
         subject: source.subject,
+        unclassifiedChunkCount,
       },
       null,
       2,
@@ -342,6 +355,7 @@ async function main(): Promise<void> {
     manifestPath,
     {
       chunkCount: chunks.length,
+      classifiedChunkCount,
       eventType: "ingested",
       failedPageCount: 0,
       occurredAt:
@@ -350,6 +364,7 @@ async function main(): Promise<void> {
         remainingOcrRequiredPageCount,
       pageCount: pages.length,
       sourceId: source.id,
+      unclassifiedChunkCount,
     },
   );
 
@@ -357,12 +372,15 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         chunkCount: chunks.length,
+        classifiedChunkCount,
+        classificationCoverage,
         ocrAppliedPageCount:
           replacements.length,
         ocrRequiredPageCount:
           remainingOcrRequiredPageCount,
         sourceId: source.id,
         status: "ocr_applied",
+        unclassifiedChunkCount,
       },
       null,
       2,

@@ -109,22 +109,37 @@ export async function ingestLocalSource(
       "utf8",
     );
 
+    const classifiedChunkCount = chunks.filter(
+      ({ topicIds }) => topicIds.length > 0,
+    ).length;
+    const unclassifiedChunkCount =
+      chunks.length - classifiedChunkCount;
+    const classificationCoverage =
+      chunks.length === 0
+        ? 0
+        : classifiedChunkCount / chunks.length;
+
     const ocrRequiredPageCount = assessedPages.filter(
       ({ extractionMethod }) => extractionMethod === "ocr_required",
     ).length;
     const report = {
       chunkCount: chunks.length,
+      classifiedChunkCount,
+      classificationCoverage,
       documentType: request.source.documentType,
       materializationStatus: materialization.status,
       ocrRequiredPageCount,
       pageCount: assessedPages.length,
       sourceId: request.source.id,
+      unclassifiedChunkCount,
+      unclassifiedChunkCount,
       subject: request.source.subject,
     };
     await mkdir(reportRoot, { recursive: true });
     await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     await appendManifestEvent(request.manifestPath, {
       chunkCount: chunks.length,
+      classifiedChunkCount,
       eventType: "ingested",
       failedPageCount: 0,
       occurredAt: new Date().toISOString(),
