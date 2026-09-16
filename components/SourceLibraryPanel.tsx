@@ -24,7 +24,17 @@ function sourceCountLabel(source: SafeStudySourceSummary): string {
       : questions;
   }
   if (source.chunkCount > 0) {
-    return `${source.chunkCount} chunk${source.chunkCount === 1 ? "" : "s"}`;
+    const chunks =
+      `${source.chunkCount} chunk${source.chunkCount === 1 ? "" : "s"}`;
+    const classified =
+      source.classifiedChunkCount > 0
+        ? ` · ${source.classifiedChunkCount} trusted-topic`
+        : "";
+    const ocr =
+      source.ocrRequiredPageCount > 0
+        ? ` · ${source.ocrRequiredPageCount} OCR`
+        : "";
+    return chunks + classified + ocr;
   }
   return "Indexed metadata";
 }

@@ -9,8 +9,11 @@ import {
 const sources = [
   {
     chunkCount: 145,
+    classifiedChunkCount: 132,
     documentType: "textbook" as const,
     latestAcquiredAt: "2026-09-13T18:00:00.000Z",
+    ocrRequiredPageCount: 3,
+    pageCount: 680,
     pairedQuestionCount: 0,
     questionCount: 0,
     sourceId: "physics-oxford-2023",
@@ -20,8 +23,11 @@ const sources = [
   },
   {
     chunkCount: 0,
+    classifiedChunkCount: 0,
     documentType: "question-paper" as const,
     latestAcquiredAt: "2026-09-13T19:00:00.000Z",
+    ocrRequiredPageCount: 0,
+    pageCount: 24,
     pairedQuestionCount: 15,
     questionCount: 18,
     sourceId: "physics-m25-hl-tz2-p2-qp",
@@ -56,6 +62,11 @@ describe("source catalog API", () => {
 
     expect(response.status).toBe(200);
     expect(body.sources).toHaveLength(2);
+    expect(body.sources[0]).toMatchObject({
+      classifiedChunkCount: 132,
+      ocrRequiredPageCount: 3,
+      pageCount: 680,
+    });
     expect(body.sources[1]).toMatchObject({
       pairedQuestionCount: 15,
       questionCount: 18,

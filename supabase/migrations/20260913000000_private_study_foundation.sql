@@ -1382,7 +1382,10 @@ returns table (
   title text,
   version_count integer,
   latest_acquired_at timestamptz,
+  page_count integer,
+  ocr_required_page_count integer,
   chunk_count integer,
+  classified_chunk_count integer,
   question_count integer,
   paired_question_count integer
 )
@@ -1400,11 +1403,39 @@ as $$
     max(version.acquired_at) as latest_acquired_at,
     (
       select count(*)::integer
+      from private.document_pages page
+      join private.document_versions page_version
+        on page_version.id = page.document_version_id
+      where page_version.document_id = document.id
+    ) as page_count,
+    (
+      select count(*)::integer
+      from private.document_pages page
+      join private.document_versions page_version
+        on page_version.id = page.document_version_id
+      where page_version.document_id = document.id
+        and page.extraction_method = 'ocr_required'
+    ) as ocr_required_page_count,
+    (
+      select count(*)::integer
       from private.content_chunks chunk
       join private.document_versions chunk_version
         on chunk_version.id = chunk.document_version_id
       where chunk_version.document_id = document.id
     ) as chunk_count,
+    (
+      select count(distinct chunk.id)::integer
+      from private.content_chunks chunk
+      join private.document_versions chunk_version
+        on chunk_version.id = chunk.document_version_id
+      where chunk_version.document_id = document.id
+        and exists (
+          select 1
+          from private.content_chunk_topics mapping
+          where mapping.content_chunk_id = chunk.id
+            and mapping.confidence >= 0.8
+        )
+    ) as classified_chunk_count,
     (
       select count(*)::integer
       from private.past_paper_questions question

@@ -140,6 +140,31 @@ describe("Supabase migration integrity", () => {
     expect(exactQuestion).toContain("question.timezone");
   });
 
+  it("exposes safe source-quality counts without private text", async () => {
+    const sql = await migration();
+    const catalog = sql.slice(
+      sql.indexOf(
+        "create or replace function public.list_private_study_sources",
+      ),
+      sql.indexOf(
+        "-- Final RPC privilege hardening",
+      ),
+    );
+
+    expect(catalog).toContain(
+      "page_count integer",
+    );
+    expect(catalog).toContain(
+      "ocr_required_page_count integer",
+    );
+    expect(catalog).toContain(
+      "classified_chunk_count integer",
+    );
+    expect(catalog).toContain(
+      "mapping.confidence >= 0.8",
+    );
+  });
+
   it("exposes safe paired-question counts without markscheme text in the source catalog", async () => {
     const sql = await migration();
 

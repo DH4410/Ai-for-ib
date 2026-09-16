@@ -11,7 +11,10 @@ export type SafeStudySourceSummary = {
   title: string;
   versionCount: number;
   latestAcquiredAt: string | null;
+  pageCount: number;
+  ocrRequiredPageCount: number;
   chunkCount: number;
+  classifiedChunkCount: number;
   questionCount: number;
   pairedQuestionCount: number;
 };
@@ -29,7 +32,10 @@ type RpcRow = {
   title: string;
   version_count: number;
   latest_acquired_at: string | null;
+  page_count: number;
+  ocr_required_page_count: number;
   chunk_count: number;
+  classified_chunk_count: number;
   question_count: number;
   paired_question_count: number;
 };
@@ -71,8 +77,15 @@ export class SupabaseStudySourceCatalogRepository
 
     return ((data ?? []) as RpcRow[]).map((row) => ({
       chunkCount: Number(row.chunk_count),
+      classifiedChunkCount: Number(
+        row.classified_chunk_count,
+      ),
       documentType: row.document_type,
       latestAcquiredAt: row.latest_acquired_at,
+      ocrRequiredPageCount: Number(
+        row.ocr_required_page_count,
+      ),
+      pageCount: Number(row.page_count),
       pairedQuestionCount: Number(
         row.paired_question_count,
       ),
