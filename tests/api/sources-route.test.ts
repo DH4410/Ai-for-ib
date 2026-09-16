@@ -11,6 +11,7 @@ const sources = [
     chunkCount: 145,
     documentType: "textbook" as const,
     latestAcquiredAt: "2026-09-13T18:00:00.000Z",
+    pairedQuestionCount: 0,
     questionCount: 0,
     sourceId: "physics-oxford-2023",
     subject: "physics" as const,
@@ -21,6 +22,7 @@ const sources = [
     chunkCount: 0,
     documentType: "question-paper" as const,
     latestAcquiredAt: "2026-09-13T19:00:00.000Z",
+    pairedQuestionCount: 15,
     questionCount: 18,
     sourceId: "physics-m25-hl-tz2-p2-qp",
     subject: "physics" as const,
@@ -54,6 +56,10 @@ describe("source catalog API", () => {
 
     expect(response.status).toBe(200);
     expect(body.sources).toHaveLength(2);
+    expect(body.sources[1]).toMatchObject({
+      pairedQuestionCount: 15,
+      questionCount: 18,
+    });
     for (const source of body.sources) {
       expect(source).not.toHaveProperty("sourceReference");
       expect(source).not.toHaveProperty("source_reference");

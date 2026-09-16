@@ -13,6 +13,7 @@ export type SafeStudySourceSummary = {
   latestAcquiredAt: string | null;
   chunkCount: number;
   questionCount: number;
+  pairedQuestionCount: number;
 };
 
 export interface StudySourceCatalogRepository {
@@ -30,6 +31,7 @@ type RpcRow = {
   latest_acquired_at: string | null;
   chunk_count: number;
   question_count: number;
+  paired_question_count: number;
 };
 
 type RpcClient = {
@@ -71,6 +73,9 @@ export class SupabaseStudySourceCatalogRepository
       chunkCount: Number(row.chunk_count),
       documentType: row.document_type,
       latestAcquiredAt: row.latest_acquired_at,
+      pairedQuestionCount: Number(
+        row.paired_question_count,
+      ),
       questionCount: Number(row.question_count),
       sourceId: row.source_id,
       subject: row.subject,

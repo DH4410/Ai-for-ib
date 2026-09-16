@@ -17,7 +17,11 @@ import type { Subject } from "@/types/study";
 
 function sourceCountLabel(source: SafeStudySourceSummary): string {
   if (source.questionCount > 0) {
-    return `${source.questionCount} question${source.questionCount === 1 ? "" : "s"}`;
+    const questions =
+      `${source.questionCount} question${source.questionCount === 1 ? "" : "s"}`;
+    return source.pairedQuestionCount > 0
+      ? `${questions} · ${source.pairedQuestionCount} paired`
+      : questions;
   }
   if (source.chunkCount > 0) {
     return `${source.chunkCount} chunk${source.chunkCount === 1 ? "" : "s"}`;

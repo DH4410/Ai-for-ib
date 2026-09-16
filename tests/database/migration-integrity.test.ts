@@ -54,6 +54,17 @@ describe("Supabase migration integrity", () => {
     );
   });
 
+  it("exposes safe paired-question counts without markscheme text in the source catalog", async () => {
+    const sql = await migration();
+
+    expect(sql).toContain(
+      "paired_question_count integer",
+    );
+    expect(sql).toContain(
+      "question.pairing_status = 'paired'",
+    );
+  });
+
   it("keeps SECURITY DEFINER search paths out of public", async () => {
     const sql = await migration();
 

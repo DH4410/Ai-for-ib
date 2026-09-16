@@ -1333,7 +1333,8 @@ returns table (
   version_count integer,
   latest_acquired_at timestamptz,
   chunk_count integer,
-  question_count integer
+  question_count integer,
+  paired_question_count integer
 )
 language sql
 stable
@@ -1358,7 +1359,13 @@ as $$
       select count(*)::integer
       from private.past_paper_questions question
       where question.source_question_document_id = document.id
-    ) as question_count
+    ) as question_count,
+    (
+      select count(*)::integer
+      from private.past_paper_questions question
+      where question.source_question_document_id = document.id
+        and question.pairing_status = 'paired'
+    ) as paired_question_count
   from private.documents document
   left join private.document_versions version
     on version.document_id = document.id
