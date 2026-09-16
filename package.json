@@ -20,7 +20,8 @@
     "training:split-sft": "tsx scripts/split-sft-dataset.ts",
     "training:topic-coverage": "tsx scripts/report-training-topic-coverage.ts",
     "project:readiness": "tsx scripts/report-project-readiness.ts",
-    "training:render-review": "tsx scripts/render-adapter-review.ts"
+    "training:render-review": "tsx scripts/render-adapter-review.ts",
+    "training:data-plan": "tsx scripts/plan-training-data.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
