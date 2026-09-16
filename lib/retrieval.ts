@@ -14,6 +14,7 @@ import {
   type StudySourceRepository,
 } from "@/lib/retrieval/repository";
 import type { StudyDocumentType } from "@/lib/study-source/types";
+import { findIBDPTopic } from "@/lib/taxonomy/ibdp";
 import type { SourceChunk, StudyMode, Subject } from "@/types/study";
 
 export type StudyRetrievalFilters = {
@@ -106,6 +107,31 @@ function toPastPaperSourceChunk(
   };
 }
 
+function retrievalQuery(
+  query: string,
+  topicIds: string[] | undefined,
+): string {
+  const topicLabels = (topicIds ?? [])
+    .map((topicId) =>
+      findIBDPTopic(topicId),
+    )
+    .filter(
+      (
+        topic,
+      ): topic is NonNullable<
+        ReturnType<typeof findIBDPTopic>
+      > => Boolean(topic),
+    )
+    .map(({ label }) => label);
+
+  return [
+    query.trim(),
+    ...topicLabels,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function wantsPastPaperQuestions(
   filters: StudyRetrievalFilters | undefined,
 ): boolean {
@@ -166,10 +192,14 @@ export function createStudyRetriever({
       );
     }
 
+    const searchQuery = retrievalQuery(
+      args.query,
+      args.filters?.topicIds,
+    );
     const request: RetrievalRequest = {
       documentTypes: args.filters?.documentTypes ?? DEFAULT_DOCUMENT_TYPES,
       limit: Math.min(Math.max(limit * 4, 10), 100),
-      query: args.query,
+      query: searchQuery,
       subject: args.subject,
       topicIds: args.filters?.topicIds,
     };
@@ -180,7 +210,7 @@ export function createStudyRetriever({
       try {
         vector = await repository.searchVector(
           request,
-          await embedQuery(args.query),
+          await embedQuery(searchQuery),
         );
       } catch {
         vector = [];
