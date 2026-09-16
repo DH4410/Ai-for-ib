@@ -218,7 +218,11 @@ as $$
   left join content_chunk_topics mapping on mapping.content_chunk_id = chunk.id
   where chunk.subject = p_subject
     and chunk.document_type = any(p_document_types)
-    and chunk.search_vector @@ plainto_tsquery('english', p_query)
+    and (
+      cardinality(p_topic_ids) > 0
+      or chunk.search_vector @@
+        plainto_tsquery('english', p_query)
+    )
     and (
       cardinality(p_topic_ids) = 0
       or not exists (

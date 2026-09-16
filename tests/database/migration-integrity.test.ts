@@ -61,6 +61,13 @@ describe("Supabase migration integrity", () => {
       ),
     );
 
+    expect(lexical).toContain(
+      "cardinality(p_topic_ids) > 0",
+    );
+    expect(lexical).toContain(
+      "or chunk.search_vector @@",
+    );
+
     for (const body of [lexical, vector]) {
       expect(body).toContain(
         "from unnest(p_topic_ids) requested(topic_id)",
