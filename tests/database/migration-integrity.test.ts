@@ -9,6 +9,7 @@ const RPC_NAMES = [
   "index_private_study_source",
   "search_private_past_paper_questions",
   "get_private_past_paper_question",
+  "get_private_past_paper_asset",
   "record_private_learning_attempt",
   "get_private_learning_progress",
   "index_private_past_paper",
@@ -165,6 +166,31 @@ describe("Supabase migration integrity", () => {
     );
     expect(sql).toContain(
       "(question.value->>'page_end')::integer",
+    );
+  });
+
+  it("binds source assets to the exact indexed PDF version", async () => {
+    const sql = await migration();
+    const assetFunction = sql.slice(
+      sql.indexOf(
+        "create or replace function public.get_private_past_paper_asset",
+      ),
+      sql.indexOf(
+        "create or replace function public.record_private_learning_attempt",
+      ),
+    );
+
+    expect(sql).toContain(
+      "source_question_version_id uuid not null references private.document_versions(id)",
+    );
+    expect(sql).toContain(
+      "v_question_version_id,",
+    );
+    expect(assetFunction).toContain(
+      "version.id = question.source_question_version_id",
+    );
+    expect(assetFunction).toContain(
+      "version.storage_path",
     );
   });
 

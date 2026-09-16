@@ -83,6 +83,7 @@ create table if not exists private.content_chunk_topics (
 create table if not exists private.past_paper_questions (
   id text primary key,
   source_question_document_id uuid not null references private.documents(id) on delete restrict,
+  source_question_version_id uuid not null references private.document_versions(id) on delete restrict,
   source_markscheme_document_id uuid references private.documents(id) on delete restrict,
   subject text not null check (subject in ('chemistry', 'physics', 'mathematics')),
   syllabus_version text not null,
@@ -849,7 +850,47 @@ $$;
 
 revoke all on function public.get_private_past_paper_question(text)
   from public, anon, authenticated;
+revoke all on function public.get_private_past_paper_asset(text)
+  from public, anon, authenticated;
 grant execute on function public.get_private_past_paper_question(text)
+  to service_role;
+grant execute on function public.get_private_past_paper_asset(text)
+  to service_role;
+
+
+create or replace function public.get_private_past_paper_asset(
+  p_question_id text
+)
+returns table (
+  storage_path text,
+  mime_type text,
+  page_start integer,
+  page_end integer,
+  title text
+)
+language sql
+stable
+security definer
+set search_path = pg_catalog, private
+as $$
+  select
+    version.storage_path,
+    version.mime_type,
+    question.page_start,
+    question.page_end,
+    document.title
+  from private.past_paper_questions question
+  join private.document_versions version
+    on version.id = question.source_question_version_id
+  join private.documents document
+    on document.id = question.source_question_document_id
+  where question.id = p_question_id
+  limit 1;
+$$;
+
+revoke all on function public.get_private_past_paper_asset(text)
+  from public, anon, authenticated;
+grant execute on function public.get_private_past_paper_asset(text)
   to service_role;
 
 
@@ -1313,6 +1354,7 @@ begin
   insert into private.past_paper_questions (
     id,
     source_question_document_id,
+    source_question_version_id,
     source_markscheme_document_id,
     subject,
     syllabus_version,
@@ -1335,6 +1377,7 @@ begin
   select
     question.value->>'id',
     v_question_document_id,
+    v_question_version_id,
     case
       when question.value->>'pairing_status' = 'paired'
         then v_markscheme_document_id
