@@ -49,6 +49,7 @@ function toSourceCitation(
   return {
     documentType: source.documentType,
     id: source.id,
+    level: source.level,
     locator: source.locator,
     marks: source.marks,
     markschemeAvailable:
@@ -58,6 +59,8 @@ function toSourceCitation(
     pairingStatus: source.pairingStatus,
     paper: source.paper,
     questionNumber: source.questionNumber,
+    session: source.session,
+    timezone: source.timezone,
     title: source.title,
     topicIds: source.topicIds,
     year: source.year,
