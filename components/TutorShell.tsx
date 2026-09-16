@@ -737,6 +737,13 @@ export function TutorShell() {
                                 : "Question only"}
                             </em>
                           ) : null}
+                          {source.documentType ===
+                            "question-paper" &&
+                          source.pageStart ? (
+                            <PrivateSourcePdf
+                              source={source}
+                            />
+                          ) : null}
                           {turn.mode === "practice" &&
                           source.documentType ===
                             "question-paper" ? (
