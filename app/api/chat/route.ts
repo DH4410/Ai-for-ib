@@ -16,6 +16,7 @@ import { formatLearnerContext } from "@/lib/learning/context";
 import {
   SupabaseLearningProgressRepository,
 } from "@/lib/learning/repository";
+import { sanitizeMarkAnswer } from "@/lib/marking/score";
 import { generateTutorAnswer } from "@/lib/model";
 import { formatRealPastPaperPractice } from "@/lib/past-papers/practice";
 import { buildSystemPrompt } from "@/lib/prompt";
@@ -153,9 +154,20 @@ export function createChatPostHandler(
           { role: "user", content: parsedRequest.message },
         ],
       });
+      const markSource = sources.find(
+        ({ documentType }) =>
+          documentType === "question-paper",
+      ) ?? sources[0];
+      const answer =
+        parsedRequest.mode === "mark"
+          ? sanitizeMarkAnswer(
+              result.text,
+              markSource,
+            )
+          : result.text;
 
       const response: TutorResponse = {
-        answer: result.text,
+        answer,
         model: result.model,
         sources: sources.map(toSourceCitation),
       };
