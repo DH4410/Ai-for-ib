@@ -29,6 +29,10 @@ export type SourceReadiness = ReadinessSourceRecord & {
   latestEvent: ManifestEvent["eventType"] | "not_started";
   indexed: boolean;
   ingested: boolean;
+  indexStatus:
+    | "fresh"
+    | "stale"
+    | "not_indexed";
   ocrRequiredPageCount: number;
   classifiedChunkCount: number | null;
   unclassifiedChunkCount: number | null;
@@ -53,6 +57,7 @@ export type ProjectReadiness = {
     indexedSourceCount: number;
     ingestedSourceCount: number;
     failedSourceIds: string[];
+    staleIndexSourceIds: string[];
     notStartedSourceIds: string[];
     ingestedNotIndexedSourceIds: string[];
     ocrRequiredSourceIds: string[];
@@ -90,16 +95,40 @@ export function summarizeSourceReadiness(
       sourceEvents,
       source.id,
     );
-    const latestIngested = [...sourceEvents]
-      .reverse()
-      .find(
-        (
-          event,
-        ): event is Extract<
-          ManifestEvent,
-          { eventType: "ingested" }
-        > => event.eventType === "ingested",
+    const latestMaterializationIndex =
+      sourceEvents.findLastIndex(
+        ({ eventType }) =>
+          eventType === "materialized" ||
+          eventType === "duplicate",
       );
+    const latestIngestedIndex =
+      sourceEvents.findLastIndex(
+        ({ eventType }) =>
+          eventType === "ingested",
+      );
+    const latestIndexedIndex =
+      sourceEvents.findLastIndex(
+        ({ eventType }) =>
+          eventType === "indexed",
+      );
+    const ingestionIsCurrent =
+      latestIngestedIndex >= 0 &&
+      (latestMaterializationIndex < 0 ||
+        latestIngestedIndex >
+          latestMaterializationIndex);
+    const indexIsFresh =
+      ingestionIsCurrent &&
+      latestIndexedIndex >
+        latestIngestedIndex;
+    const latestIngested =
+      latestIngestedIndex >= 0
+        ? (sourceEvents[
+            latestIngestedIndex
+          ] as Extract<
+            ManifestEvent,
+            { eventType: "ingested" }
+          >)
+        : undefined;
 
     const classifiedChunkCount =
       latestIngested?.classifiedChunkCount ??
@@ -125,12 +154,13 @@ export function summarizeSourceReadiness(
             : null,
       classifiedChunkCount,
       failed: latest?.eventType === "failed",
-      indexed: sourceEvents.some(
-        ({ eventType }) => eventType === "indexed",
-      ),
-      ingested: sourceEvents.some(
-        ({ eventType }) => eventType === "ingested",
-      ),
+      indexed: indexIsFresh,
+      indexStatus: indexIsFresh
+        ? "fresh"
+        : latestIndexedIndex >= 0
+          ? "stale"
+          : "not_indexed",
+      ingested: ingestionIsCurrent,
       latestEvent:
         latest?.eventType ?? "not_started",
       ocrRequiredPageCount:
@@ -164,6 +194,12 @@ export function summarizeSourceReadiness(
     classifiedChunkCount,
     failedSourceIds: rows
       .filter(({ failed }) => failed)
+      .map(({ id }) => id),
+    staleIndexSourceIds: rows
+      .filter(
+        ({ indexStatus }) =>
+          indexStatus === "stale",
+      )
       .map(({ id }) => id),
     ingestedNotIndexedSourceIds: rows
       .filter(

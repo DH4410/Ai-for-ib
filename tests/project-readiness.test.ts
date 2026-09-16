@@ -111,6 +111,7 @@ describe("project readiness", () => {
           classificationCoverage: 0.8,
           classifiedChunkCount: 16,
           indexed: true,
+          indexStatus: "fresh",
           ingested: true,
           latestEvent: "indexed",
           ocrRequiredPageCount: 2,
@@ -118,6 +119,7 @@ describe("project readiness", () => {
         },
       ],
       unclassifiedChunkCount: 4,
+      staleIndexSourceIds: [],
       unclassifiedSourceIds: [
         "physics-book",
       ],
@@ -129,6 +131,119 @@ describe("project readiness", () => {
     expect(report.training.warnings).toContain(
       "sft-validation-jsonl-not-configured",
     );
+  });
+
+  it("marks an old database index stale after a newer ingestion or OCR pass", () => {
+    const report = buildProjectReadiness({
+      manifestEvents: [
+        {
+          chunkCount: 10,
+          classifiedChunkCount: 8,
+          eventType: "ingested",
+          failedPageCount: 0,
+          occurredAt:
+            "2026-09-16T18:00:00Z",
+          ocrRequiredPageCount: 2,
+          pageCount: 50,
+          sourceId: "physics-book",
+          unclassifiedChunkCount: 2,
+        },
+        {
+          checksumSha256: "a".repeat(64),
+          chunkCount: 10,
+          embeddingCount: 10,
+          eventType: "indexed",
+          occurredAt:
+            "2026-09-16T18:05:00Z",
+          sourceId: "physics-book",
+        },
+        {
+          chunkCount: 12,
+          classifiedChunkCount: 11,
+          eventType: "ingested",
+          failedPageCount: 0,
+          occurredAt:
+            "2026-09-16T18:10:00Z",
+          ocrRequiredPageCount: 0,
+          pageCount: 50,
+          sourceId: "physics-book",
+          unclassifiedChunkCount: 1,
+        },
+      ],
+      sources: [source],
+    });
+
+    expect(report.rag.sources[0]).toMatchObject({
+      indexed: false,
+      indexStatus: "stale",
+      ingested: true,
+      ocrRequiredPageCount: 0,
+    });
+    expect(
+      report.rag.staleIndexSourceIds,
+    ).toEqual(["physics-book"]);
+    expect(
+      report.rag.ingestedNotIndexedSourceIds,
+    ).toEqual(["physics-book"]);
+  });
+
+  it("treats a new materialized version as not yet ingested even when an older version was indexed", () => {
+    const report = buildProjectReadiness({
+      manifestEvents: [
+        {
+          byteCount: 100,
+          checksumSha256: "a".repeat(64),
+          eventType: "materialized",
+          localRelativePath:
+            "physics/old.pdf",
+          mimeType: "application/pdf",
+          occurredAt:
+            "2026-09-16T18:00:00Z",
+          sourceId: "physics-book",
+        },
+        {
+          chunkCount: 10,
+          eventType: "ingested",
+          failedPageCount: 0,
+          occurredAt:
+            "2026-09-16T18:01:00Z",
+          ocrRequiredPageCount: 0,
+          pageCount: 50,
+          sourceId: "physics-book",
+        },
+        {
+          checksumSha256: "a".repeat(64),
+          chunkCount: 10,
+          embeddingCount: 10,
+          eventType: "indexed",
+          occurredAt:
+            "2026-09-16T18:02:00Z",
+          sourceId: "physics-book",
+        },
+        {
+          byteCount: 120,
+          checksumSha256: "b".repeat(64),
+          eventType: "materialized",
+          localRelativePath:
+            "physics/new.pdf",
+          mimeType: "application/pdf",
+          occurredAt:
+            "2026-09-16T18:20:00Z",
+          sourceId: "physics-book",
+        },
+      ],
+      sources: [source],
+    });
+
+    expect(report.rag.sources[0]).toMatchObject({
+      indexed: false,
+      indexStatus: "stale",
+      ingested: false,
+      latestEvent: "materialized",
+    });
+    expect(
+      report.rag.staleIndexSourceIds,
+    ).toEqual(["physics-book"]);
   });
 
   it("blocks fine-tuning inputs only for missing files or leakage, not target shortfalls", () => {
