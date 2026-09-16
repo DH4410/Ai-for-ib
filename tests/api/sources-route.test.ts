@@ -20,6 +20,7 @@ const sources = [
     subject: "physics" as const,
     title: "Physics Course Companion",
     versionCount: 1,
+    visualDependentQuestionCount: 0,
   },
   {
     chunkCount: 0,
@@ -34,6 +35,7 @@ const sources = [
     subject: "physics" as const,
     title: "Physics May 2025 HL TZ2 P2",
     versionCount: 1,
+    visualDependentQuestionCount: 3,
   },
 ];
 
@@ -70,6 +72,7 @@ describe("source catalog API", () => {
     expect(body.sources[1]).toMatchObject({
       pairedQuestionCount: 15,
       questionCount: 18,
+      visualDependentQuestionCount: 3,
     });
     for (const source of body.sources) {
       expect(source).not.toHaveProperty("sourceReference");

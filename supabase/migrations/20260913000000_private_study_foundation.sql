@@ -1481,7 +1481,8 @@ returns table (
   chunk_count integer,
   classified_chunk_count integer,
   question_count integer,
-  paired_question_count integer
+  paired_question_count integer,
+  visual_dependent_question_count integer
 )
 language sql
 stable
@@ -1540,7 +1541,13 @@ as $$
       from private.past_paper_questions question
       where question.source_question_document_id = document.id
         and question.pairing_status = 'paired'
-    ) as paired_question_count
+    ) as paired_question_count,
+    (
+      select count(*)::integer
+      from private.past_paper_questions question
+      where question.source_question_document_id = document.id
+        and cardinality(question.asset_references) > 0
+    ) as visual_dependent_question_count
   from private.documents document
   left join private.document_versions version
     on version.document_id = document.id

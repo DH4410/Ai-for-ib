@@ -245,6 +245,12 @@ describe("Supabase migration integrity", () => {
       "paired_question_count integer",
     );
     expect(sql).toContain(
+      "visual_dependent_question_count integer",
+    );
+    expect(sql).toContain(
+      "cardinality(question.asset_references) > 0",
+    );
+    expect(sql).toContain(
       "question.pairing_status = 'paired'",
     );
   });

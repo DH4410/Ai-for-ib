@@ -138,4 +138,6 @@ The legacy `SUPABASE_SERVICE_ROLE_KEY` remains accepted as a fallback. Real ques
 
 The current structured practice UI is text-first. During paper indexing, questions whose extracted wording explicitly depends on a graph, diagram, figure, image, or a visual "shown below/above" are tagged with `visual-context-required`.
 
-Those records stay in the private database for provenance but are excluded from real-question retrieval until the corresponding visual assets can be preserved and rendered. The indexing report includes `visualDependentQuestionCount` so this loss is visible instead of silently serving incomplete questions.
+Those records stay in the private database for provenance but are excluded from real-question retrieval until the model has a verified visual-input path. The indexing report and authenticated Source Library expose only a safe count of these withheld questions so the coverage gap is measurable.
+
+For paper questions that are already safe to retrieve as text, the citation can open the exact original PDF version and page range through the authenticated private source viewer. That viewer is for **human inspection only**: showing the PDF to the learner does not mean the tutor model has seen or understood a graph/diagram.

@@ -17,6 +17,7 @@ export type SafeStudySourceSummary = {
   classifiedChunkCount: number;
   questionCount: number;
   pairedQuestionCount: number;
+  visualDependentQuestionCount: number;
 };
 
 export interface StudySourceCatalogRepository {
@@ -38,6 +39,7 @@ type RpcRow = {
   classified_chunk_count: number;
   question_count: number;
   paired_question_count: number;
+  visual_dependent_question_count: number;
 };
 
 type RpcClient = {
@@ -94,6 +96,9 @@ export class SupabaseStudySourceCatalogRepository
       subject: row.subject,
       title: row.title,
       versionCount: Number(row.version_count),
+      visualDependentQuestionCount: Number(
+        row.visual_dependent_question_count,
+      ),
     }));
   }
 }

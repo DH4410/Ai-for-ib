@@ -19,9 +19,15 @@ function sourceCountLabel(source: SafeStudySourceSummary): string {
   if (source.questionCount > 0) {
     const questions =
       `${source.questionCount} question${source.questionCount === 1 ? "" : "s"}`;
-    return source.pairedQuestionCount > 0
-      ? `${questions} · ${source.pairedQuestionCount} paired`
-      : questions;
+    const paired =
+      source.pairedQuestionCount > 0
+        ? ` · ${source.pairedQuestionCount} paired`
+        : "";
+    const visual =
+      source.visualDependentQuestionCount > 0
+        ? ` · ${source.visualDependentQuestionCount} visual withheld`
+        : "";
+    return questions + paired + visual;
   }
   if (source.chunkCount > 0) {
     const chunks =
