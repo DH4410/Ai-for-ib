@@ -133,7 +133,12 @@ export function createSourcePdfGetHandler(
           asset,
         );
 
-      return new NextResponse(bytes, {
+      const body = bytes.buffer.slice(
+        bytes.byteOffset,
+        bytes.byteOffset + bytes.byteLength,
+      ) as ArrayBuffer;
+
+      return new NextResponse(body, {
         headers: {
           "Cache-Control":
             "private, no-store, max-age=0",
