@@ -131,9 +131,8 @@ export async function ingestLocalSource(
       ocrRequiredPageCount,
       pageCount: assessedPages.length,
       sourceId: request.source.id,
-      unclassifiedChunkCount,
-      unclassifiedChunkCount,
       subject: request.source.subject,
+      unclassifiedChunkCount,
     };
     await mkdir(reportRoot, { recursive: true });
     await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
@@ -146,6 +145,7 @@ export async function ingestLocalSource(
       ocrRequiredPageCount,
       pageCount: assessedPages.length,
       sourceId: request.source.id,
+      unclassifiedChunkCount,
     });
 
     return {
