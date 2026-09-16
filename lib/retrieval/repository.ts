@@ -21,6 +21,8 @@ export type PastPaperRetrievalRequest = {
   years?: number[];
   paper?: string;
   pairedOnly?: boolean;
+  session?: "may" | "november";
+  timezone?: string;
 };
 
 export type StoredSourceChunk = {
@@ -44,6 +46,8 @@ export type StoredPastPaperQuestion = {
   title: string;
   locator: string;
   level?: "HL" | "SL";
+  session?: "may" | "november";
+  timezone?: string;
   questionText: string;
   markschemeText: string | null;
   topicIds: string[];
@@ -114,6 +118,12 @@ function filterPastPapers(
       (!request.level ||
         question.level?.toLocaleUpperCase() ===
           request.level) &&
+      (!request.session ||
+        question.session?.toLocaleLowerCase() ===
+          request.session) &&
+      (!request.timezone ||
+        question.timezone?.toLocaleUpperCase() ===
+          request.timezone.toLocaleUpperCase()) &&
       (!request.pairedOnly || question.pairingStatus === "paired") &&
       containsEveryTopic(question.topicIds, request.topicIds),
   );
@@ -249,6 +259,8 @@ type RpcPastPaperRow = {
   title: string;
   locator: string;
   level: "HL" | "SL";
+  session: "may" | "november";
+  timezone: string;
   question_text: string;
   markscheme_text: string | null;
   topic_ids: string[] | null;
@@ -292,6 +304,8 @@ function toRankedPastPaperQuestion(
     locator: row.locator,
     level: row.level,
     marks: row.marks,
+    session: row.session,
+    timezone: row.timezone,
     markschemeText: row.markscheme_text,
     pairingStatus: row.pairing_status,
     paper: row.paper,
@@ -321,6 +335,7 @@ export class SupabaseStudySourceRepository implements StudySourceRepository {
         p_document_types: request.documentTypes,
         p_limit: request.limit,
         p_query: request.query,
+        p_session: request.session ?? null,
         p_subject: request.subject,
         p_topic_ids: request.topicIds ?? [],
       },
@@ -365,6 +380,7 @@ export class SupabaseStudySourceRepository implements StudySourceRepository {
         p_paper: request.paper ?? null,
         p_query: request.query,
         p_subject: request.subject,
+        p_timezone: request.timezone ?? null,
         p_topic_ids: request.topicIds ?? [],
         p_years: request.years ?? [],
       },
