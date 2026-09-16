@@ -29,9 +29,9 @@ describe("private source PDF route", () => {
       createSourcePdfGetHandler({
         loadBytes: async () =>
           new Uint8Array([1]),
-        repository: {
+        getRepository: () => ({
           getPastPaperAsset,
-        },
+        }),
         resolveUserId: async () => {
           throw new AuthenticationError(
             "invalid session",
@@ -61,10 +61,10 @@ describe("private source PDF route", () => {
             0x44,
             0x46,
           ]),
-        repository: {
+        getRepository: () => ({
           getPastPaperAsset: async () =>
             descriptor,
-        },
+        }),
         resolveUserId: async () =>
           "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       });
@@ -110,10 +110,10 @@ describe("private source PDF route", () => {
       createSourcePdfGetHandler({
         loadBytes: async () =>
           new Uint8Array([]),
-        repository: {
+        getRepository: () => ({
           getPastPaperAsset:
             vi.fn(async () => null),
-        },
+        }),
         resolveUserId: async () => {
           throw new AuthenticationError(
             "sign in required",

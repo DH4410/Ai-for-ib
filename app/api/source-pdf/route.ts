@@ -23,7 +23,7 @@ import {
 export const runtime = "nodejs";
 
 type SourcePdfRouteDependencies = {
-  repository: SourceAssetRepository;
+  getRepository: () => SourceAssetRepository;
   resolveUserId: (
     request: Request,
   ) => Promise<string>;
@@ -101,7 +101,8 @@ export function createSourcePdfGetHandler(
       const questionId =
         questionIdFrom(request);
       const asset =
-        await dependencies.repository
+        await dependencies
+          .getRepository()
           .getPastPaperAsset(questionId);
 
       if (!asset) {
@@ -154,11 +155,10 @@ export function createSourcePdfGetHandler(
   };
 }
 
-const productionRepository =
-  new SupabaseSourceAssetRepository();
-
 export const GET =
   createSourcePdfGetHandler({
+    getRepository: () =>
+      new SupabaseSourceAssetRepository(),
     loadBytes: async (asset) => {
       const path =
         resolvePrivateSourceAssetPath(
@@ -172,7 +172,6 @@ export const GET =
         await readFile(path),
       );
     },
-    repository: productionRepository,
     resolveUserId:
       resolveAuthenticatedUserId,
   });
