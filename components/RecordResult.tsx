@@ -56,6 +56,10 @@ export function RecordResult({
   const [topicId, setTopicId] =
     useState(defaultTopicId);
   const sourceMaximum = source?.marks;
+  const maximumIsOfficial =
+    source?.documentType === "question-paper" &&
+    sourceMaximum !== undefined &&
+    sourceMaximum !== null;
   const suggestionMatchesSource =
     suggestedScore !== undefined &&
     suggestedMaximumMarks !== undefined &&
@@ -212,6 +216,11 @@ export function RecordResult({
         <label>
           <span>Score</span>
           <input
+            max={
+              maximumMarks
+                ? Number(maximumMarks)
+                : undefined
+            }
             min="0"
             onChange={(event) =>
               setScore(event.target.value)
@@ -225,10 +234,16 @@ export function RecordResult({
         <label>
           <span>Out of</span>
           <input
+            aria-describedby={
+              maximumIsOfficial
+                ? "official-mark-total-note"
+                : undefined
+            }
             min="0.5"
             onChange={(event) =>
               setMaximumMarks(event.target.value)
             }
+            readOnly={maximumIsOfficial}
             required
             step="0.5"
             type="number"
@@ -262,6 +277,17 @@ export function RecordResult({
           </select>
         </label>
       </div>
+
+      {maximumIsOfficial ? (
+        <p
+          className="recordResultStatus"
+          id="official-mark-total-note"
+        >
+          Official indexed question total. You can
+          confirm the awarded score, but not change
+          the question&apos;s maximum marks.
+        </p>
+      ) : null}
 
       <fieldset className="mistakeTags">
         <legend>What went wrong?</legend>
