@@ -176,6 +176,28 @@ describe("Supabase migration integrity", () => {
     );
   });
 
+  it("keeps learning attempts consistent with taxonomy and paper subject", async () => {
+    const sql = await migration();
+    const progressFunction = sql.slice(
+      sql.indexOf(
+        "create or replace function public.record_private_learning_attempt",
+      ),
+      sql.indexOf(
+        "create or replace function public.get_private_learning_progress",
+      ),
+    );
+
+    expect(progressFunction).toContain(
+      "attempt topic does not match the subject taxonomy",
+    );
+    expect(progressFunction).toContain(
+      "question.subject = v_subject",
+    );
+    expect(progressFunction).toContain(
+      "past-paper question does not match the attempt subject",
+    );
+  });
+
   it("keeps SECURITY DEFINER search paths out of public", async () => {
     const sql = await migration();
 

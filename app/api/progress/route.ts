@@ -10,6 +10,7 @@ import {
   type LearningProgressRepository,
 } from "@/lib/learning/repository";
 import { updateTopicMastery } from "@/lib/learning/mastery";
+import { findIBDPTopic } from "@/lib/taxonomy/ibdp";
 import type { Subject } from "@/types/study";
 
 export const runtime = "nodejs";
@@ -90,6 +91,16 @@ function parseAttempt(
   ) {
     throw new ProgressValidationError(
       "topicId must be a non-empty string",
+    );
+  }
+  const topicId = value.topicId.trim();
+  const topic = findIBDPTopic(topicId);
+  if (
+    !topic ||
+    topic.subject !== subject
+  ) {
+    throw new ProgressValidationError(
+      "topicId must belong to the selected subject taxonomy",
     );
   }
 
@@ -179,7 +190,7 @@ function parseAttempt(
     pastPaperQuestionId,
     score,
     subject,
-    topicId: value.topicId.trim(),
+    topicId,
   };
 }
 

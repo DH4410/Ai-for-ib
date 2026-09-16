@@ -862,6 +862,7 @@ as $$
 declare
   v_subject text;
   v_topic_id text;
+  v_past_paper_question_id text;
 begin
   if p_student_id is null then
     raise exception 'student id is required';
@@ -873,6 +874,11 @@ begin
 
   v_subject := p_attempt->>'subject';
   v_topic_id := p_attempt->>'topic_id';
+  v_past_paper_question_id :=
+    nullif(
+      p_attempt->>'past_paper_question_id',
+      ''
+    );
 
   if v_topic_id is null
     or v_topic_id <> p_mastery->>'topic_id' then
@@ -886,6 +892,18 @@ begin
       and topic.subject = v_subject
   ) then
     raise exception 'attempt topic does not match the subject taxonomy';
+  end if;
+
+  if v_past_paper_question_id is not null
+    and not exists (
+      select 1
+      from private.past_paper_questions question
+      where question.id =
+        v_past_paper_question_id
+        and question.subject = v_subject
+    ) then
+    raise exception
+      'past-paper question does not match the attempt subject';
   end if;
 
   insert into private.student_profiles (id)
@@ -908,7 +926,7 @@ begin
   )
   values (
     p_student_id,
-    nullif(p_attempt->>'past_paper_question_id', ''),
+    v_past_paper_question_id,
     v_subject,
     v_topic_id,
     (p_attempt->>'score')::numeric,

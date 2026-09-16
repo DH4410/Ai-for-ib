@@ -70,6 +70,51 @@ describe("progress API", () => {
     expect(response.status).toBe(401);
   });
 
+  it("rejects a topic from the wrong subject before writing progress", async () => {
+    const repository =
+      new InMemoryLearningProgressRepository();
+    const handlers = createProgressHandlers({
+      now: () =>
+        "2026-09-13T18:00:00.000Z",
+      repository,
+      resolveUserId: async () =>
+        studentId,
+    });
+
+    const response = await handlers.POST(
+      new Request(
+        "http://localhost/api/progress",
+        {
+          body: JSON.stringify({
+            maximumMarks: 5,
+            score: 4,
+            subject: "physics",
+            topicId:
+              "chemistry.reactivity",
+          }),
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          method: "POST",
+        },
+      ),
+    );
+
+    expect(response.status).toBe(400);
+    expect(
+      await response.json(),
+    ).toMatchObject({
+      error:
+        "topicId must belong to the selected subject taxonomy",
+    });
+    expect(
+      await repository.listTopicMastery(
+        studentId,
+      ),
+    ).toEqual([]);
+  });
+
   it("rejects impossible scores before writing progress", async () => {
     const repository =
       new InMemoryLearningProgressRepository();
