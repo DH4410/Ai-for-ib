@@ -95,6 +95,38 @@ def aggregate_results(
     }
 
 
+def classify_case(
+    base_mechanical: dict[str, Any],
+    adapter_mechanical: dict[str, Any],
+) -> str:
+    base_coverage = float(
+        base_mechanical["conceptCoverage"]
+    )
+    adapter_coverage = float(
+        adapter_mechanical["conceptCoverage"]
+    )
+    base_guardrails = bool(
+        base_mechanical["guardrailsPassed"]
+    )
+    adapter_guardrails = bool(
+        adapter_mechanical["guardrailsPassed"]
+    )
+
+    if (
+        (base_guardrails and not adapter_guardrails)
+        or adapter_coverage < base_coverage
+    ):
+        return "regression"
+
+    if (
+        (not base_guardrails and adapter_guardrails)
+        or adapter_coverage > base_coverage
+    ):
+        return "improvement"
+
+    return "neutral"
+
+
 def comparison_delta(
     base: dict[str, float],
     adapter: dict[str, float],
@@ -218,20 +250,58 @@ def main() -> None:
     )
 
     paired_cases = []
-    for base_case, adapter_case in zip(
+    for benchmark_case, base_case, adapter_case in zip(
+        cases,
         base_results,
         adapter_results,
         strict=True,
     ):
+        classification = classify_case(
+            base_case["mechanical"],
+            adapter_case["mechanical"],
+        )
         paired_cases.append(
             {
                 "id": base_case["id"],
                 "subject": base_case["subject"],
                 "mode": base_case["mode"],
+                "prompt": benchmark_case.get("prompt"),
+                "rubric": benchmark_case.get("rubric"),
+                "classification": classification,
+                "reviewPriority":
+                    "high"
+                    if classification == "regression"
+                    else "standard",
                 "base": base_case,
                 "adapter": adapter_case,
             }
         )
+
+    classification_counts = {
+        label: sum(
+            1
+            for case in paired_cases
+            if case["classification"] == label
+        )
+        for label in (
+            "regression",
+            "neutral",
+            "improvement",
+        )
+    }
+    manual_review_queue = [
+        case["id"]
+        for case in sorted(
+            paired_cases,
+            key=lambda case: (
+                0
+                if case["classification"]
+                == "regression"
+                else 1,
+                case["id"],
+            ),
+        )
+    ]
 
     output = {
         "baseModel": args.base_model,
@@ -244,12 +314,15 @@ def main() -> None:
         ),
         "summary": {
             "base": base_summary,
+            "caseClassifications":
+                classification_counts,
             "adapter": adapter_summary,
             "deltaAdapterMinusBase": comparison_delta(
                 base_summary,
                 adapter_summary,
             ),
         },
+        "manualReviewQueue": manual_review_queue,
         "cases": paired_cases,
     }
     output_path.write_text(
