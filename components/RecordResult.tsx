@@ -10,6 +10,7 @@ import {
   getBrowserSupabaseClient,
   isBrowserSupabaseConfigured,
 } from "@/lib/database/supabase-browser";
+import { mostSpecificTopicId } from "@/lib/learning/topic-selection";
 import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
 import type {
   SourceCitation,
@@ -47,9 +48,10 @@ export function RecordResult({
     [subject],
   );
   const defaultTopicId =
-    source?.topicIds?.find((topicId) =>
-      topics.some((topic) => topic.id === topicId),
-    ) ?? "";
+    mostSpecificTopicId(
+      subject,
+      source?.topicIds,
+    );
   const [expanded, setExpanded] = useState(false);
   const [topicId, setTopicId] =
     useState(defaultTopicId);
