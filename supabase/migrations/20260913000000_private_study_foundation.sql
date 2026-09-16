@@ -863,6 +863,7 @@ declare
   v_subject text;
   v_topic_id text;
   v_past_paper_question_id text;
+  v_question_marks integer;
 begin
   if p_student_id is null then
     raise exception 'student id is required';
@@ -894,16 +895,32 @@ begin
     raise exception 'attempt topic does not match the subject taxonomy';
   end if;
 
-  if v_past_paper_question_id is not null
-    and not exists (
-      select 1
-      from private.past_paper_questions question
-      where question.id =
-        v_past_paper_question_id
-        and question.subject = v_subject
-    ) then
-    raise exception
-      'past-paper question does not match the attempt subject';
+  if v_past_paper_question_id is not null then
+    select question.marks
+    into v_question_marks
+    from private.past_paper_questions question
+    where question.id =
+      v_past_paper_question_id
+      and question.subject = v_subject
+      and exists (
+        select 1
+        from private.past_paper_question_topics mapping
+        where mapping.past_paper_question_id =
+          question.id
+          and mapping.topic_id = v_topic_id
+      );
+
+    if not found then
+      raise exception
+        'past-paper question does not match the attempt subject/topic';
+    end if;
+
+    if v_question_marks is not null
+      and (p_attempt->>'maximum_marks')::numeric <>
+        v_question_marks::numeric then
+      raise exception
+        'maximum marks do not match the indexed past-paper question';
+    end if;
   end if;
 
   insert into private.student_profiles (id)

@@ -104,6 +104,31 @@ describe("Supabase migration integrity", () => {
     );
   });
 
+  it("binds recorded past-paper attempts to the indexed subject, topic and mark total", async () => {
+    const sql = await migration();
+    const learningFunction = sql.slice(
+      sql.indexOf(
+        "create or replace function public.record_private_learning_attempt",
+      ),
+      sql.indexOf(
+        "create or replace function public.get_private_learning_progress",
+      ),
+    );
+
+    expect(learningFunction).toContain(
+      "private.past_paper_question_topics mapping",
+    );
+    expect(learningFunction).toContain(
+      "mapping.topic_id = v_topic_id",
+    );
+    expect(learningFunction).toContain(
+      "past-paper question does not match the attempt subject/topic",
+    );
+    expect(learningFunction).toContain(
+      "maximum marks do not match the indexed past-paper question",
+    );
+  });
+
   it("preserves past-paper question page provenance", async () => {
     const sql = await migration();
 
