@@ -95,12 +95,21 @@ It never prints OCR page text to the console.
 
 ## 4. Inspect before indexing
 
+Run the metadata-only quality inspection:
+
+```powershell
+npm run study:inspect -- --source-id physics-oxford-2023
+```
+
+It reports chunk counts, topic IDs/counts, classification-method counts, classification coverage, OCR-required page numbers and unclassified page ranges. It never prints extracted source text.
+
 Check:
 
 - plausible page count;
 - OCR-required count;
 - correct title/source ID;
 - several page numbers/headings;
+- classification coverage and unclassified page ranges from `study:inspect`;
 - absence of the PDF/extracted text from `git status`;
 - `npm run verify:private`.
 

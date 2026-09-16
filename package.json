@@ -22,7 +22,8 @@
     "project:readiness": "tsx scripts/report-project-readiness.ts",
     "training:render-review": "tsx scripts/render-adapter-review.ts",
     "training:data-plan": "tsx scripts/plan-training-data.ts",
-    "study:apply-ocr": "tsx scripts/apply-ocr.ts"
+    "study:apply-ocr": "tsx scripts/apply-ocr.ts",
+    "study:inspect": "tsx scripts/inspect-source.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
