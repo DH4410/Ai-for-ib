@@ -30,6 +30,9 @@ export type SourceReadiness = ReadinessSourceRecord & {
   indexed: boolean;
   ingested: boolean;
   ocrRequiredPageCount: number;
+  classifiedChunkCount: number | null;
+  unclassifiedChunkCount: number | null;
+  classificationCoverage: number | null;
   failed: boolean;
 };
 
@@ -51,6 +54,9 @@ export type ProjectReadiness = {
     ingestedSourceCount: number;
     failedSourceIds: string[];
     ocrRequiredPageCount: number;
+    classifiedChunkCount: number;
+    unclassifiedChunkCount: number;
+    classificationCoverage: number | null;
   };
   training: TrainingInputReadiness & {
     privateFineTuneInputsReady: boolean;
@@ -91,8 +97,29 @@ export function summarizeSourceReadiness(
         > => event.eventType === "ingested",
       );
 
+    const classifiedChunkCount =
+      latestIngested?.classifiedChunkCount ??
+      null;
+    const unclassifiedChunkCount =
+      latestIngested?.unclassifiedChunkCount ??
+      null;
+    const knownChunkCount =
+      classifiedChunkCount !== null &&
+      unclassifiedChunkCount !== null
+        ? classifiedChunkCount +
+          unclassifiedChunkCount
+        : null;
+
     return {
       ...source,
+      classificationCoverage:
+        knownChunkCount && knownChunkCount > 0
+          ? classifiedChunkCount! /
+            knownChunkCount
+          : knownChunkCount === 0
+            ? 0
+            : null,
+      classifiedChunkCount,
       failed: latest?.eventType === "failed",
       indexed: sourceEvents.some(
         ({ eventType }) => eventType === "indexed",
@@ -104,10 +131,33 @@ export function summarizeSourceReadiness(
         latest?.eventType ?? "not_started",
       ocrRequiredPageCount:
         latestIngested?.ocrRequiredPageCount ?? 0,
+      unclassifiedChunkCount,
     };
   });
 
+  const classifiedChunkCount = rows.reduce(
+    (total, source) =>
+      total +
+      (source.classifiedChunkCount ?? 0),
+    0,
+  );
+  const unclassifiedChunkCount = rows.reduce(
+    (total, source) =>
+      total +
+      (source.unclassifiedChunkCount ?? 0),
+    0,
+  );
+  const classifiedTotal =
+    classifiedChunkCount +
+    unclassifiedChunkCount;
+
   return {
+    classificationCoverage:
+      classifiedTotal > 0
+        ? classifiedChunkCount /
+          classifiedTotal
+        : null,
+    classifiedChunkCount,
     failedSourceIds: rows
       .filter(({ failed }) => failed)
       .map(({ id }) => id),
@@ -123,6 +173,7 @@ export function summarizeSourceReadiness(
       0,
     ),
     sources: rows,
+    unclassifiedChunkCount,
   };
 }
 

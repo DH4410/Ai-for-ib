@@ -72,12 +72,14 @@ describe("project readiness", () => {
       manifestEvents: [
         {
           chunkCount: 20,
+          classifiedChunkCount: 16,
           eventType: "ingested",
           failedPageCount: 0,
           occurredAt: "2026-09-16T18:00:00Z",
           ocrRequiredPageCount: 2,
           pageCount: 100,
           sourceId: "physics-book",
+          unclassifiedChunkCount: 4,
         },
         {
           checksumSha256: "a".repeat(64),
@@ -93,18 +95,24 @@ describe("project readiness", () => {
     });
 
     expect(report.rag).toMatchObject({
+      classificationCoverage: 0.8,
+      classifiedChunkCount: 16,
       indexedSourceCount: 1,
       ingestedSourceCount: 1,
       ocrRequiredPageCount: 2,
       sources: [
         {
           id: "physics-book",
+          classificationCoverage: 0.8,
+          classifiedChunkCount: 16,
           indexed: true,
           ingested: true,
           latestEvent: "indexed",
           ocrRequiredPageCount: 2,
+          unclassifiedChunkCount: 4,
         },
       ],
+      unclassifiedChunkCount: 4,
     });
     expect(report.training.blockers).toEqual([]);
     expect(
