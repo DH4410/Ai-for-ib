@@ -71,6 +71,31 @@ describe("study retrieval façade", () => {
     ]);
   });
 
+  it("uses selected topic labels to rescue generic lexical-only focused queries", async () => {
+    const retrieve = createStudyRetriever({
+      repository:
+        new InMemoryStudySourceRepository([
+          physicsB1,
+        ]),
+    });
+
+    const result = await retrieve({
+      filters: {
+        topicIds: [
+          "physics.b.particulate-matter.specific-latent-heat",
+        ],
+      },
+      mode: "learn",
+      query:
+        "Teach me this from the beginning.",
+      subject: "physics",
+    });
+
+    expect(
+      result.map(({ id }) => id),
+    ).toEqual(["physics-b1-p43"]);
+  });
+
   it("honours real Paper 2/year filters and hides the markscheme during practice", async () => {
     const retrieve = createStudyRetriever({
       repository: new InMemoryStudySourceRepository(
