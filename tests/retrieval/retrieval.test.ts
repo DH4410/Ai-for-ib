@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createStudyRetriever } from "@/lib/retrieval";
 import { InMemoryStudySourceRepository } from "@/lib/retrieval/repository";
@@ -71,14 +71,26 @@ describe("study retrieval façade", () => {
     ]);
   });
 
-  it("uses selected topic labels to rescue generic lexical-only focused queries", async () => {
+  it("uses canonical labels for focused lexical search while preserving learner wording for embeddings", async () => {
+    const repository =
+      new InMemoryStudySourceRepository([
+        physicsB1,
+      ]);
+    const lexical = vi.spyOn(
+      repository,
+      "searchLexical",
+    );
+    let embeddedQuery = "";
     const retrieve = createStudyRetriever({
-      repository:
-        new InMemoryStudySourceRepository([
-          physicsB1,
-        ]),
+      embedQuery: async (query) => {
+        embeddedQuery = query;
+        return [0.1, 0.2];
+      },
+      repository,
     });
 
+    const learnerQuery =
+      "Teach me this from the beginning.";
     const result = await retrieve({
       filters: {
         topicIds: [
@@ -86,14 +98,24 @@ describe("study retrieval façade", () => {
         ],
       },
       mode: "learn",
-      query:
-        "Teach me this from the beginning.",
+      query: learnerQuery,
       subject: "physics",
     });
 
     expect(
       result.map(({ id }) => id),
     ).toEqual(["physics-b1-p43"]);
+    expect(lexical).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "Specific latent heat",
+      }),
+    );
+    expect(embeddedQuery).toContain(
+      learnerQuery,
+    );
+    expect(embeddedQuery).toContain(
+      "Specific latent heat",
+    );
   });
 
   it("honours real Paper 2/year filters and hides the markscheme during practice", async () => {
