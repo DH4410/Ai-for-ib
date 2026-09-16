@@ -116,6 +116,7 @@ For the first plumbing test, use a small instruct model. After the pipeline work
 !git clone https://github.com/DH4410/Ai-for-ib.git
 %cd Ai-for-ib
 !pip install --upgrade --no-cache-dir -r training/requirements-colab.txt
+!python training/check_training_stack.py
 ```
 
 ### 3. Mount Drive for private data/checkpoints
@@ -279,7 +280,7 @@ Mechanical improvement alone is not enough to promote the adapter; inspect incor
 
 ## Colab dependency reproducibility
 
-The Hugging Face/QLoRA packages in `training/requirements-colab.txt` are pinned to the versions verified for this training code. PyTorch is deliberately **not** pinned there because Colab installs a CUDA-compatible PyTorch build for the assigned runtime; replacing it blindly can break GPU compatibility.
+The Hugging Face/QLoRA packages in `training/requirements-colab.txt` are pinned to a conservative API-reviewed compatibility baseline for this training code. PyTorch is deliberately **not** pinned there because Colab installs a CUDA-compatible PyTorch build for the assigned runtime; replacing it blindly can break GPU compatibility.
 
 The pinned stack is:
 
@@ -292,7 +293,9 @@ accelerate 1.15.0
 bitsandbytes 0.50.0
 ```
 
-If this stack is intentionally upgraded later, rerun the base-model benchmark plumbing test before starting a full fine-tune.
+Immediately after installation, `training/check_training_stack.py` verifies the exact installed package versions and inspects the TRL parameters used by our runner (`quantization_config`, `peft_config`, `processing_class`, `eval_dataset`, `completion_only_loss`, `max_length`, and `trust_remote_code`). The first Colab model download should not start unless this installed-stack check passes.
+
+If this stack is intentionally upgraded later, update the pins deliberately, rerun the stack check, and rerun the base-model benchmark plumbing test before starting a full fine-tune.
 
 
 ## Initial behavior-data target
