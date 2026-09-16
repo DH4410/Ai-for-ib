@@ -1,3 +1,5 @@
+import type { SourceCitation } from "@/types/study";
+
 export type MarkSuggestion = {
   score: number;
   maximumMarks: number;
@@ -37,4 +39,34 @@ export function stripMarkSuggestion(
   text: string,
 ): string {
   return text.replace(MARK_FOOTER, "").trimEnd();
+}
+
+
+export function recordableMarkSuggestion(
+  text: string,
+  source: SourceCitation | undefined,
+): MarkSuggestion | null {
+  const suggestion = parseMarkSuggestion(text);
+  if (!suggestion) {
+    return null;
+  }
+
+  if (source?.documentType === "question-paper") {
+    if (
+      source.pairingStatus !== "paired" ||
+      source.marks === undefined ||
+      source.marks === null ||
+      source.marks !== suggestion.maximumMarks
+    ) {
+      return null;
+    }
+  } else if (
+    source?.marks !== undefined &&
+    source.marks !== null &&
+    source.marks !== suggestion.maximumMarks
+  ) {
+    return null;
+  }
+
+  return suggestion;
 }

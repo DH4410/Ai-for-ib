@@ -11,7 +11,7 @@ import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
 import {
-  parseMarkSuggestion,
+  recordableMarkSuggestion,
   stripMarkSuggestion,
 } from "@/lib/marking/score";
 import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
@@ -75,10 +75,17 @@ type VisibleTurn = ChatTurn & {
 function markSuggestion(
   turn: VisibleTurn,
 ) {
-  return turn.role === "assistant" &&
-    turn.mode === "mark"
-    ? parseMarkSuggestion(turn.content)
-    : null;
+  if (
+    turn.role !== "assistant" ||
+    turn.mode !== "mark"
+  ) {
+    return null;
+  }
+
+  return recordableMarkSuggestion(
+    turn.content,
+    progressSource(turn),
+  );
 }
 
 function visibleTurnContent(

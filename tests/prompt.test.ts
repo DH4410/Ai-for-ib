@@ -75,6 +75,31 @@ describe("retrieved-source prompting", () => {
     expect(prompt).toContain("one useful next hint or question at a time");
   });
 
+  it("forbids numeric official scoring for a question-only real paper", () => {
+    const prompt = buildSystemPrompt({
+      mode: "mark",
+      retrievedContext: formatRetrievedContext([
+        {
+          documentType: "question-paper",
+          id: "physics-q5",
+          locator: "May 2025 · HL · P2 · Q5",
+          marks: 3,
+          pairingStatus: "question_only",
+          text: "Question:\nExplain the effect.",
+          title: "Physics May 2025 HL Paper 2",
+        },
+      ]),
+      subject: "physics",
+    });
+
+    expect(prompt).toContain(
+      "If that real question is question-only, give qualitative feedback",
+    );
+    expect(prompt).toContain(
+      "do not invent a MARK footer",
+    );
+  });
+
   it("requires a structured mark footer only when maximum marks are available", () => {
     const prompt = buildSystemPrompt({
       mode: "mark",
