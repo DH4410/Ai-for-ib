@@ -107,11 +107,10 @@ function toPastPaperSourceChunk(
   };
 }
 
-function retrievalQuery(
-  query: string,
+function topicLabels(
   topicIds: string[] | undefined,
-): string {
-  const topicLabels = (topicIds ?? [])
+): string[] {
+  return (topicIds ?? [])
     .map((topicId) =>
       findIBDPTopic(topicId),
     )
@@ -123,10 +122,25 @@ function retrievalQuery(
       > => Boolean(topic),
     )
     .map(({ label }) => label);
+}
 
+function lexicalRetrievalQuery(
+  query: string,
+  topicIds: string[] | undefined,
+): string {
+  const labels = topicLabels(topicIds);
+  return labels.length > 0
+    ? labels.join(" ")
+    : query.trim();
+}
+
+function semanticRetrievalQuery(
+  query: string,
+  topicIds: string[] | undefined,
+): string {
   return [
     query.trim(),
-    ...topicLabels,
+    ...topicLabels(topicIds),
   ]
     .filter(Boolean)
     .join(" ");
@@ -192,14 +206,20 @@ export function createStudyRetriever({
       );
     }
 
-    const searchQuery = retrievalQuery(
-      args.query,
-      args.filters?.topicIds,
-    );
+    const lexicalQuery =
+      lexicalRetrievalQuery(
+        args.query,
+        args.filters?.topicIds,
+      );
+    const semanticQuery =
+      semanticRetrievalQuery(
+        args.query,
+        args.filters?.topicIds,
+      );
     const request: RetrievalRequest = {
       documentTypes: args.filters?.documentTypes ?? DEFAULT_DOCUMENT_TYPES,
       limit: Math.min(Math.max(limit * 4, 10), 100),
-      query: searchQuery,
+      query: lexicalQuery,
       subject: args.subject,
       topicIds: args.filters?.topicIds,
     };
@@ -210,7 +230,7 @@ export function createStudyRetriever({
       try {
         vector = await repository.searchVector(
           request,
-          await embedQuery(searchQuery),
+          await embedQuery(semanticQuery),
         );
       } catch {
         vector = [];
