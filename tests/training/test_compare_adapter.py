@@ -7,6 +7,7 @@ from training.compare_adapter import (
     aggregate_results,
     classify_case,
     comparison_delta,
+    mechanical_promotion_gate,
     validate_adapter_base,
 )
 
@@ -121,6 +122,59 @@ class AdapterComparisonHelpersTest(unittest.TestCase):
                 },
             ),
             "neutral",
+        )
+
+    def test_mechanical_promotion_gate_requires_no_regressions_and_human_review(self):
+        base = {
+            "averageConceptCoverage": 0.7,
+            "guardrailPassRate": 0.9,
+            "averageLatencySeconds": 2.0,
+        }
+        adapter = {
+            "averageConceptCoverage": 0.75,
+            "guardrailPassRate": 0.9,
+            "averageLatencySeconds": 2.2,
+        }
+
+        passed = mechanical_promotion_gate(
+            base,
+            adapter,
+            {
+                "regression": 0,
+                "neutral": 5,
+                "improvement": 7,
+            },
+        )
+        self.assertEqual(
+            passed,
+            {
+                "mechanicalPassed": True,
+                "humanReviewRequired": True,
+                "reasons": [],
+            },
+        )
+
+        failed = mechanical_promotion_gate(
+            base,
+            {
+                **adapter,
+                "guardrailPassRate": 0.8,
+            },
+            {
+                "regression": 1,
+                "neutral": 4,
+                "improvement": 7,
+            },
+        )
+        self.assertFalse(failed["mechanicalPassed"])
+        self.assertTrue(failed["humanReviewRequired"])
+        self.assertIn(
+            "mechanical-case-regressions-present",
+            failed["reasons"],
+        )
+        self.assertIn(
+            "guardrail-pass-rate-regressed",
+            failed["reasons"],
         )
 
 
