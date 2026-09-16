@@ -121,7 +121,10 @@ describe("retrieved-source prompting", () => {
       "May 2025 · HL · P2 · Q4 · 2 marks",
     );
     expect(prompt).toContain(
-      "If the maximum mark is not known, do not invent a MARK footer.",
+      "For a retrieved real past-paper question, award a numeric mark and emit a MARK footer only when the official markscheme is present.",
+    );
+    expect(prompt).toContain(
+      "For non-past-paper work, only use a numeric MARK footer when a trustworthy maximum mark is supplied.",
     );
   });
 });
