@@ -816,15 +816,62 @@ function normalize(text: string): string {
     .trim();
 }
 
+function isNumberPart(value: string): boolean {
+  return (
+    value.length > 0 &&
+    [...value].every(
+      (character) =>
+        character >= "0" &&
+        character <= "9",
+    )
+  );
+}
+
+function isPhysicsSectionToken(
+  value: string,
+): boolean {
+  const parts = value.split(".");
+  return (
+    parts.length === 2 &&
+    parts[0].length === 1 &&
+    parts[0] >= "A" &&
+    parts[0] <= "E" &&
+    isNumberPart(parts[1])
+  );
+}
+
 function labelWithoutCurriculumPrefix(
   label: string,
 ): string {
-  return label
-    .replace(
-      /^(?:themes+[a-e]:s*|[a-e].d+s+|structures+d+(?:.d+)?:?s*|reactivitys+d+(?:.d+)?:?s*|topics+d+:s*)/i,
-      "",
-    )
-    .trim();
+  const trimmed = label.trim();
+  const lower = trimmed.toLocaleLowerCase();
+
+  if (
+    lower.startsWith("theme ") ||
+    lower.startsWith("structure ") ||
+    lower.startsWith("reactivity ") ||
+    lower.startsWith("topic ")
+  ) {
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex >= 0) {
+      return trimmed
+        .slice(colonIndex + 1)
+        .trim();
+    }
+  }
+
+  const firstSpace = trimmed.indexOf(" ");
+  if (firstSpace > 0) {
+    const firstToken =
+      trimmed.slice(0, firstSpace);
+    if (isPhysicsSectionToken(firstToken)) {
+      return trimmed
+        .slice(firstSpace + 1)
+        .trim();
+    }
+  }
+
+  return trimmed;
 }
 
 function phraseSpecificity(
