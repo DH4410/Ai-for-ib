@@ -95,7 +95,6 @@ const ALIAS_RULES: AliasRule[] = [
       "specific heat capacity",
       "thermal equilibrium",
       "conduction convection radiation",
-      "thermal energy",
     ],
   },
   {
