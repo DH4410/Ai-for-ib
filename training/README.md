@@ -277,6 +277,16 @@ This loads the base model once in 4-bit, records its benchmark responses, attach
 
 Mechanical improvement alone is not enough to promote the adapter; inspect incorrect or regressed cases manually.
 
+Generate the private side-by-side review page:
+
+```bash
+npm run training:render-review -- \
+  training/outputs/adapter-comparison.json \
+  training/outputs/adapter-review.html
+```
+
+The HTML is self-contained and stays under the ignored `training/outputs/` directory. It orders mechanical regressions first, shows prompt/rubric plus base/adapter answers, lets you judge correctness, pedagogy, IB relevance and overall preference, autosaves choices in browser localStorage, and exports a JSON review file.
+
 
 ## Colab dependency reproducibility
 
