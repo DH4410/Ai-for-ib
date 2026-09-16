@@ -98,8 +98,13 @@ describe("project readiness", () => {
       classificationCoverage: 0.8,
       classifiedChunkCount: 16,
       indexedSourceCount: 1,
+      ingestedNotIndexedSourceIds: [],
       ingestedSourceCount: 1,
+      notStartedSourceIds: [],
       ocrRequiredPageCount: 2,
+      ocrRequiredSourceIds: [
+        "physics-book",
+      ],
       sources: [
         {
           id: "physics-book",
@@ -113,6 +118,9 @@ describe("project readiness", () => {
         },
       ],
       unclassifiedChunkCount: 4,
+      unclassifiedSourceIds: [
+        "physics-book",
+      ],
     });
     expect(report.training.blockers).toEqual([]);
     expect(
@@ -129,6 +137,9 @@ describe("project readiness", () => {
       sources: [source],
     });
 
+    expect(
+      missing.rag.notStartedSourceIds,
+    ).toEqual(["physics-book"]);
     expect(missing.training.blockers).toEqual([
       "private-train-jsonl-missing",
       "private-benchmark-jsonl-missing",

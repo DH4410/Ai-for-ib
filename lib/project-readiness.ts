@@ -53,6 +53,10 @@ export type ProjectReadiness = {
     indexedSourceCount: number;
     ingestedSourceCount: number;
     failedSourceIds: string[];
+    notStartedSourceIds: string[];
+    ingestedNotIndexedSourceIds: string[];
+    ocrRequiredSourceIds: string[];
+    unclassifiedSourceIds: string[];
     ocrRequiredPageCount: number;
     classifiedChunkCount: number;
     unclassifiedChunkCount: number;
@@ -160,6 +164,30 @@ export function summarizeSourceReadiness(
     classifiedChunkCount,
     failedSourceIds: rows
       .filter(({ failed }) => failed)
+      .map(({ id }) => id),
+    ingestedNotIndexedSourceIds: rows
+      .filter(
+        ({ ingested, indexed }) =>
+          ingested && !indexed,
+      )
+      .map(({ id }) => id),
+    notStartedSourceIds: rows
+      .filter(
+        ({ latestEvent }) =>
+          latestEvent === "not_started",
+      )
+      .map(({ id }) => id),
+    ocrRequiredSourceIds: rows
+      .filter(
+        ({ ocrRequiredPageCount }) =>
+          ocrRequiredPageCount > 0,
+      )
+      .map(({ id }) => id),
+    unclassifiedSourceIds: rows
+      .filter(
+        ({ unclassifiedChunkCount }) =>
+          (unclassifiedChunkCount ?? 0) > 0,
+      )
       .map(({ id }) => id),
     indexedSourceCount: rows.filter(
       ({ indexed }) => indexed,
