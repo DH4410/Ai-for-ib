@@ -127,6 +127,33 @@ def classify_case(
     return "neutral"
 
 
+def mechanical_promotion_gate(
+    base: dict[str, float],
+    adapter: dict[str, float],
+    classification_counts: dict[str, int],
+) -> dict[str, Any]:
+    reasons: list[str] = []
+
+    if classification_counts.get("regression", 0) > 0:
+        reasons.append("mechanical-case-regressions-present")
+    if (
+        adapter["averageConceptCoverage"]
+        < base["averageConceptCoverage"]
+    ):
+        reasons.append("average-concept-coverage-regressed")
+    if (
+        adapter["guardrailPassRate"]
+        < base["guardrailPassRate"]
+    ):
+        reasons.append("guardrail-pass-rate-regressed")
+
+    return {
+        "mechanicalPassed": len(reasons) == 0,
+        "humanReviewRequired": True,
+        "reasons": reasons,
+    }
+
+
 def comparison_delta(
     base: dict[str, float],
     adapter: dict[str, float],
@@ -303,6 +330,12 @@ def main() -> None:
         )
     ]
 
+    promotion_gate = mechanical_promotion_gate(
+        base_summary,
+        adapter_summary,
+        classification_counts,
+    )
+
     output = {
         "baseModel": args.base_model,
         "adapter": str(adapter_path),
@@ -323,6 +356,7 @@ def main() -> None:
             ),
         },
         "manualReviewQueue": manual_review_queue,
+        "promotionGate": promotion_gate,
         "cases": paired_cases,
     }
     output_path.write_text(
