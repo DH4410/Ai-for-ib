@@ -25,6 +25,8 @@ export type StudyRetrievalFilters = {
   pastPaperQuestionId?: string;
   requireMarkscheme?: boolean;
   realPastPapersOnly?: boolean;
+  session?: "may" | "november";
+  timezone?: string;
   topicIds?: string[];
   years?: number[];
 };
@@ -85,6 +87,7 @@ function toPastPaperSourceChunk(
     id: question.id,
     locator: question.locator,
     marks: question.marks,
+    level: question.level,
     pairingStatus: question.pairingStatus,
     paper: question.paper,
     questionNumber: question.questionNumber,
@@ -94,6 +97,8 @@ function toPastPaperSourceChunk(
       ? `Question:\n${question.questionText}\n\nOfficial markscheme:\n${question.markschemeText}`
       : `Question:\n${question.questionText}`,
     title: question.title,
+    session: question.session,
+    timezone: question.timezone,
     topicIds: question.topicIds,
     year: question.year,
   };
@@ -147,7 +152,9 @@ export function createStudyRetriever({
           args.filters?.requireMarkscheme === true,
         paper: args.filters?.paper,
         query: args.query,
+        session: args.filters?.session,
         subject: args.subject,
+        timezone: args.filters?.timezone,
         topicIds: args.filters?.topicIds,
         years: args.filters?.years,
       });
