@@ -628,6 +628,8 @@ create or replace function public.search_private_past_paper_questions(
   p_years integer[] default '{}',
   p_paper text default null,
   p_level text default null,
+  p_session text default null,
+  p_timezone text default null,
   p_topic_ids text[] default '{}',
   p_paired_only boolean default false,
   p_limit integer default 20
@@ -639,6 +641,8 @@ returns table (
   title text,
   locator text,
   level text,
+  session text,
+  timezone text,
   question_text text,
   markscheme_text text,
   topic_ids text[],
@@ -668,6 +672,8 @@ as $$
       'Q' || question.question_number || coalesce(question.subquestion, '')
     ) as locator,
     question.level,
+    question.session,
+    question.timezone,
     question.question_text,
     question.markscheme_text,
     coalesce(
@@ -704,6 +710,14 @@ as $$
       or upper(question.level) = upper(p_level)
     )
     and (
+      p_session is null
+      or lower(question.session) = lower(p_session)
+    )
+    and (
+      p_timezone is null
+      or upper(question.timezone) = upper(p_timezone)
+    )
+    and (
       not p_paired_only
       or question.pairing_status = 'paired'
     )
@@ -727,10 +741,10 @@ as $$
 $$;
 
 revoke all on function public.search_private_past_paper_questions(
-  text, text, integer[], text, text, text[], boolean, integer
+  text, text, integer[], text, text, text, text, text[], boolean, integer
 ) from public, anon, authenticated;
 grant execute on function public.search_private_past_paper_questions(
-  text, text, integer[], text, text, text[], boolean, integer
+  text, text, integer[], text, text, text, text, text[], boolean, integer
 ) to service_role;
 
 
@@ -743,6 +757,9 @@ returns table (
   subject text,
   title text,
   locator text,
+  level text,
+  session text,
+  timezone text,
   question_text text,
   markscheme_text text,
   topic_ids text[],
@@ -772,6 +789,9 @@ as $$
       'Q' || question.question_number ||
         coalesce(question.subquestion, '')
     ) as locator,
+    question.level,
+    question.session,
+    question.timezone,
     question.question_text,
     question.markscheme_text,
     coalesce(
@@ -1398,7 +1418,7 @@ revoke all on function public.index_private_study_source(
   jsonb, jsonb, jsonb, jsonb
 ) from public, anon, authenticated;
 revoke all on function public.search_private_past_paper_questions(
-  text, text, integer[], text, text, text[], boolean, integer
+  text, text, integer[], text, text, text, text, text[], boolean, integer
 ) from public, anon, authenticated;
 revoke all on function public.get_private_past_paper_question(
   text
@@ -1426,7 +1446,7 @@ grant execute on function public.index_private_study_source(
   jsonb, jsonb, jsonb, jsonb
 ) to service_role;
 grant execute on function public.search_private_past_paper_questions(
-  text, text, integer[], text, text, text[], boolean, integer
+  text, text, integer[], text, text, text, text, text[], boolean, integer
 ) to service_role;
 grant execute on function public.get_private_past_paper_question(
   text
