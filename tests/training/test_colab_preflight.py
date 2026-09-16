@@ -33,8 +33,8 @@ class ColabPreflightRecommendationsTest(unittest.TestCase):
         _message, benchmark, qlora = MODULE.recommendations(
             12.0,
         )
-        self.assertIn("Qwen/Qwen3-4B", benchmark)
-        self.assertIn("Qwen/Qwen3-4B", qlora)
+        self.assertIn("Qwen/Qwen3-4B-Instruct-2507", benchmark)
+        self.assertIn("Qwen/Qwen3-4B-Instruct-2507", qlora)
         self.assertNotIn("Qwen/Qwen3-8B", qlora)
 
 
