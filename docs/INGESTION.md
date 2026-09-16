@@ -54,7 +54,46 @@ The pipeline copies the file into ignored immutable storage, computes SHA-256 pr
 
 OCR-required pages are **not** silently treated as reliable text.
 
-## 3. Inspect before indexing
+## 3. Repair OCR-required pages
+
+The first extraction pass deliberately excludes weak pages from trusted chunks. If the ingestion report shows `ocrRequiredPageCount > 0`, run OCR only on those flagged pages with a tool you trust. Save the OCR result under the ignored private directory:
+
+```text
+private-index/ocr/<source-id>.json
+```
+
+Expected private JSON shape:
+
+```json
+{
+  "pages": [
+    {
+      "pageNumber": 42,
+      "text": "OCR text for this page only"
+    }
+  ]
+}
+```
+
+Apply and revalidate the OCR text:
+
+```powershell
+npm run study:apply-ocr -- --source-id physics-oxford-2023 --ocr "private-index/ocr/physics-oxford-2023.json"
+```
+
+The command:
+
+- only accepts OCR JSON stored under `private-index/ocr/`;
+- only replaces pages previously marked `ocr_required`;
+- rejects duplicate page numbers and weak/short OCR output;
+- marks accepted pages as `ocr`;
+- rebuilds semantic chunks and topic classification from all trusted text + OCR pages;
+- updates only ignored extraction/chunk/report files;
+- appends a new safe `ingested` manifest event with counts only.
+
+It never prints OCR page text to the console.
+
+## 4. Inspect before indexing
 
 Check:
 
@@ -65,7 +104,7 @@ Check:
 - absence of the PDF/extracted text from `git status`;
 - `npm run verify:private`.
 
-## 4. Dedicated Supabase setup
+## 5. Dedicated Supabase setup
 
 Use a dedicated AI-for-IB project, not an unrelated project.
 
@@ -93,7 +132,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 The secret/service-role key must never be placed in a `NEXT_PUBLIC_*` variable.
 
-## 5. Index an ingested source
+## 6. Index an ingested source
 
 Optional embeddings:
 
@@ -123,7 +162,7 @@ npm run study:index -- --source-id physics-oxford-2023 --checksum <sha256>
 
 The 1,024-dimensional vector schema rejects embeddings with the wrong dimension.
 
-## 6. Index a real past paper
+## 7. Index a real past paper
 
 Use `npm run paper:index` with explicit normalized metadata and authorized local files. Do not rely on guessed filenames.
 
@@ -146,7 +185,7 @@ Omit `--markscheme` when no authorized matching scheme is available; the questio
 
 See `docs/PAST_PAPERS.md` for conservative pairing and visual-question rules.
 
-## 7. Runtime access boundary
+## 8. Runtime access boundary
 
 The database source schema is private. Server-only RPC execution is revoked from `PUBLIC`, `anon` and `authenticated`, and granted to the server role.
 
@@ -154,7 +193,7 @@ The browser never queries the private source database directly. After private re
 
 ## Current limitations
 
-- OCR-required pages need a separate future OCR pass.
+- OCR-required pages now have an explicit private repair/apply workflow, but the repository intentionally does not force one OCR engine.
 - Paper figures/graphs/diagrams are not yet extracted; visual-dependent questions are withheld from retrieval.
 
 

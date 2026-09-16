@@ -21,7 +21,8 @@
     "training:topic-coverage": "tsx scripts/report-training-topic-coverage.ts",
     "project:readiness": "tsx scripts/report-project-readiness.ts",
     "training:render-review": "tsx scripts/render-adapter-review.ts",
-    "training:data-plan": "tsx scripts/plan-training-data.ts"
+    "training:data-plan": "tsx scripts/plan-training-data.ts",
+    "study:apply-ocr": "tsx scripts/apply-ocr.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
