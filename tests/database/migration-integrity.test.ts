@@ -42,16 +42,43 @@ describe("Supabase migration integrity", () => {
     expect(bodyCount).toBe(functionCount);
   });
 
-  it("keeps HL/SL filtering in the private past-paper RPC contract", async () => {
+  it("keeps level, session and timezone filtering in the private past-paper RPC contract", async () => {
     const sql = await migration();
 
     expect(sql).toContain("p_level text default null");
     expect(sql).toContain(
       "or upper(question.level) = upper(p_level)",
     );
+    expect(sql).toContain("p_session text default null");
     expect(sql).toContain(
-      "text, text, integer[], text, text, text[], boolean, integer",
+      "or lower(question.session) = lower(p_session)",
     );
+    expect(sql).toContain("p_timezone text default null");
+    expect(sql).toContain(
+      "or upper(question.timezone) = upper(p_timezone)",
+    );
+    expect(sql).toContain(
+      "text, text, integer[], text, text, text, text, text[], boolean, integer",
+    );
+  });
+
+  it("returns full paper identity fields for exact-question marking", async () => {
+    const sql = await migration();
+    const exactQuestion = sql.slice(
+      sql.indexOf(
+        "create or replace function public.get_private_past_paper_question",
+      ),
+      sql.indexOf(
+        "create or replace function public.record_private_learning_attempt",
+      ),
+    );
+
+    expect(exactQuestion).toContain("level text");
+    expect(exactQuestion).toContain("session text");
+    expect(exactQuestion).toContain("timezone text");
+    expect(exactQuestion).toContain("question.level");
+    expect(exactQuestion).toContain("question.session");
+    expect(exactQuestion).toContain("question.timezone");
   });
 
   it("exposes safe paired-question counts without markscheme text in the source catalog", async () => {
