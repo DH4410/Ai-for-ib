@@ -260,7 +260,21 @@ After QLoRA finishes, load the base model and saved adapter once before doing a 
 
 The smoke test verifies that the adapter can be loaded and produces a non-trivial tutoring response. For hybrid Qwen3 candidates with `enableThinking: false`, it also fails if a `<think>` block appears unexpectedly.
 
-This is only a plumbing check. A checkpoint still has to beat the unmodified base model on the held-out private evaluation set before promotion.
+This is only a plumbing check. A checkpoint still has to beat the unmodified base model on the held-out private benchmark before promotion.
+
+Run the direct Colab comparison next:
+
+```bash
+!python training/compare_adapter.py \
+  --base-model "<same-base-model-used-for-training>" \
+  --adapter "/content/drive/MyDrive/ai-for-ib/checkpoints/Dima-IB-Tutor-v1" \
+  --benchmark "/content/drive/MyDrive/ai-for-ib/private/benchmark.jsonl" \
+  --output "training/outputs/adapter-comparison.json"
+```
+
+This loads the base model once in 4-bit, records its benchmark responses, attaches the LoRA adapter, reruns the exact same cases, and writes base/adapter responses plus concept-coverage, guardrail and latency deltas. It also checks that the adapter's recorded base model matches the selected base checkpoint.
+
+Mechanical improvement alone is not enough to promote the adapter; inspect incorrect or regressed cases manually.
 
 
 ## Colab dependency reproducibility

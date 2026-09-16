@@ -21,6 +21,6 @@ jobs:
       - run: npm run verify:private
       - run: npm test
       - run: npm run typecheck
-      - run: python3 -m py_compile training/colab_train.py training/benchmark_models.py training/colab_preflight.py training/smoke_adapter.py
+      - run: python3 -m py_compile training/colab_train.py training/benchmark_models.py training/colab_preflight.py training/smoke_adapter.py training/compare_adapter.py
       - run: python3 -m unittest discover -s tests/training -p 'test_*.py'
       - run: npm run build
