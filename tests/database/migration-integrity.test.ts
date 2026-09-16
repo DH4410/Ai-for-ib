@@ -152,6 +152,31 @@ describe("Supabase migration integrity", () => {
     );
   });
 
+  it("requires a paired official markscheme before storing a past-paper score", async () => {
+    const sql = await migration();
+    const learningFunction = sql.slice(
+      sql.indexOf(
+        "create or replace function public.record_private_learning_attempt",
+      ),
+      sql.indexOf(
+        "create or replace function public.get_private_learning_progress",
+      ),
+    );
+
+    expect(learningFunction).toContain(
+      "question.pairing_status",
+    );
+    expect(learningFunction).toContain(
+      "question.source_markscheme_document_id is not null",
+    );
+    expect(learningFunction).toContain(
+      "question.markscheme_text is not null",
+    );
+    expect(learningFunction).toContain(
+      "past-paper score requires a paired official markscheme",
+    );
+  });
+
   it("preserves past-paper question page provenance", async () => {
     const sql = await migration();
 
