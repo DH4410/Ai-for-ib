@@ -9,6 +9,7 @@ import {
 
 import { createClient } from "@supabase/supabase-js";
 
+import { resolveServerDatabaseKey } from "../lib/database/server-key";
 import {
   assessExtractedPage,
 } from "../lib/ingestion/chunks";
@@ -334,8 +335,7 @@ async function usablePages(
 
 function serverKey(): string {
   const value =
-    process.env.SUPABASE_SECRET_KEY?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    resolveServerDatabaseKey(process.env).key;
 
   if (!value) {
     throw new Error(

@@ -2,6 +2,8 @@ import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveServerDatabaseKey } from "@/lib/database/server-key";
+
 export type StudyRepositoryEnvironment = {
   [name: string]: string | undefined;
   SUPABASE_URL?: string;
@@ -9,28 +11,20 @@ export type StudyRepositoryEnvironment = {
   SUPABASE_SERVICE_ROLE_KEY?: string;
 };
 
-function serverDatabaseKey(
-  environment: StudyRepositoryEnvironment,
-): string | undefined {
-  return (
-    environment.SUPABASE_SECRET_KEY?.trim() ||
-    environment.SUPABASE_SERVICE_ROLE_KEY?.trim()
-  );
-}
-
 export function isStudyRepositoryConfigured(
   environment: StudyRepositoryEnvironment,
 ): boolean {
   return Boolean(
     environment.SUPABASE_URL?.trim() &&
-      serverDatabaseKey(environment),
+      resolveServerDatabaseKey(environment).key,
   );
 }
 
 export function getPrivateSupabaseServerClient(
   environment: StudyRepositoryEnvironment = process.env,
 ): SupabaseClient {
-  const key = serverDatabaseKey(environment);
+  const key =
+    resolveServerDatabaseKey(environment).key;
 
   if (!environment.SUPABASE_URL?.trim() || !key) {
     throw new Error(

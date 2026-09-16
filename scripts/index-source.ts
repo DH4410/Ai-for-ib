@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 import { createOpenAICompatibleBatchEmbedder } from "../lib/embedding-client";
+import { resolveServerDatabaseKey } from "../lib/database/server-key";
 import {
   STUDY_EMBEDDING_DIMENSION,
   SupabasePrivateStudyIndexRepository,
@@ -57,7 +58,7 @@ function usage(): string {
     "  npm run study:index -- --source-id <id> [--checksum <sha256>] [--inventory <metadata-json>] [--no-embeddings]",
     "",
     "Reads ignored local ingestion artifacts and loads them into the private Supabase study index.",
-    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.",
+    "SUPABASE_URL and SUPABASE_SECRET_KEY are required (legacy SUPABASE_SERVICE_ROLE_KEY is also accepted).",
     "Embeddings are added when EMBEDDING_BASE_URL and EMBEDDING_MODEL are configured.",
   ].join("\n");
 }
@@ -304,9 +305,17 @@ async function main(): Promise<void> {
   );
   const chunks = await addEmbeddings(chunkArtifact.chunks, args.noEmbeddings);
 
+  const databaseKey =
+    resolveServerDatabaseKey(process.env).key;
+  if (!databaseKey) {
+    throw new Error(
+      "missing SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY)",
+    );
+  }
+
   const client = createClient(
     requiredEnvironment("SUPABASE_URL"),
-    requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY"),
+    databaseKey,
     {
       auth: {
         autoRefreshToken: false,
