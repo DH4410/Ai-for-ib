@@ -1,7 +1,11 @@
 import type { Subject } from "@/types/study";
 import type { SourceDocument } from "@/lib/study-source/types";
 
-export type PageExtractionMethod = "text" | "ocr_required" | "failed";
+export type PageExtractionMethod =
+  | "text"
+  | "ocr_required"
+  | "ocr"
+  | "failed";
 
 export type ExtractedPageInput = {
   pageNumber: number;

@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
 
-import { buildSemanticChunks, assessExtractedPage } from "@/lib/ingestion/chunks";
+import { assessExtractedPage } from "@/lib/ingestion/chunks";
 import { materializeLocalSource } from "@/lib/ingestion/materialize";
 import { extractPdfPages } from "@/lib/ingestion/pdf";
 import type {
@@ -10,7 +10,7 @@ import type {
   IngestLocalSourceResult,
 } from "@/lib/ingestion/types";
 import { appendManifestEvent } from "@/lib/study-source/manifest";
-import { classifyTopics } from "@/lib/taxonomy/classify";
+import { buildClassifiedChunksFromPages } from "@/lib/ingestion/rebuild";
 
 function assertPathInsideRoot(root: string, candidate: string): void {
   const pathFromRoot = relative(root, candidate);
@@ -84,34 +84,12 @@ export async function ingestLocalSource(
       "utf8",
     );
 
-    const usablePages = assessedPages
-      .filter(({ extractionMethod }) => extractionMethod === "text")
-      .map(({ pageNumber, text }) => ({ pageNumber, text }));
-
     const chunks =
-      request.source.subject === "ib"
-        ? []
-        : buildSemanticChunks(usablePages, {
-            documentId: request.source.id,
-            subject: request.source.subject,
-          }).map((chunk) => {
-            const classification = classifyTopics({
-              subject: chunk.subject,
-              text: chunk.text,
-              title: chunk.title,
-            });
-
-            return {
-              ...chunk,
-              id: `${chunk.id}--${materialization.checksumSha256.slice(0, 12)}`,
-              topicConfidence: classification.confidence,
-              topicIds: classification.topicIds,
-              topicClassification: {
-                method: classification.method,
-                reason: classification.reason,
-              },
-            };
-          });
+      buildClassifiedChunksFromPages(
+        assessedPages,
+        request.source,
+        materialization.checksumSha256,
+      );
 
     await mkdir(resolve(privateIndexRoot, "chunks", request.source.subject), {
       recursive: true,
