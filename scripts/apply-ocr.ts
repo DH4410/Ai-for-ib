@@ -2,7 +2,7 @@ import {
   readFile,
   writeFile,
 } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 
 import {
   applyOcrReplacements,
@@ -171,6 +171,31 @@ function latestChecksum(
   )?.checksumSha256;
 }
 
+function assertPrivateOcrPath(path: string): string {
+  const root = resolve(
+    process.cwd(),
+    "private-index",
+    "ocr",
+  );
+  const target = resolve(
+    process.cwd(),
+    path,
+  );
+  const fromRoot = relative(root, target);
+
+  if (
+    fromRoot.length === 0 ||
+    fromRoot.startsWith("..") ||
+    fromRoot.includes(":")
+  ) {
+    throw new Error(
+      "OCR JSON must stay under private-index/ocr/",
+    );
+  }
+
+  return target;
+}
+
 async function main(): Promise<void> {
   if (process.argv.includes("--help")) {
     console.log(usage());
@@ -236,11 +261,13 @@ async function main(): Promise<void> {
     );
   }
 
+  const privateOcrPath =
+    assertPrivateOcrPath(args.ocrPath);
   const replacements =
     parseOcrReplacements(
       JSON.parse(
         await readFile(
-          resolve(process.cwd(), args.ocrPath),
+          privateOcrPath,
           "utf8",
         ),
       ),
