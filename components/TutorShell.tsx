@@ -7,6 +7,7 @@ import {
   ProgressPanel,
   type ProgressStudyTarget,
 } from "@/components/ProgressPanel";
+import { PrivateSourcePdf } from "@/components/PrivateSourcePdf";
 import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
