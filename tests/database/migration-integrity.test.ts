@@ -42,6 +42,41 @@ describe("Supabase migration integrity", () => {
     expect(bodyCount).toBe(functionCount);
   });
 
+  it("requires every requested textbook topic at trusted confidence", async () => {
+    const sql = await migration();
+    const lexical = sql.slice(
+      sql.indexOf(
+        "create or replace function public.search_private_study_chunks(",
+      ),
+      sql.indexOf(
+        "create or replace function public.search_private_study_chunks_vector(",
+      ),
+    );
+    const vector = sql.slice(
+      sql.indexOf(
+        "create or replace function public.search_private_study_chunks_vector(",
+      ),
+      sql.indexOf(
+        "-- Seed the public-label IB taxonomy",
+      ),
+    );
+
+    for (const body of [lexical, vector]) {
+      expect(body).toContain(
+        "from unnest(p_topic_ids) requested(topic_id)",
+      );
+      expect(body).toContain(
+        "required_topic.topic_id = requested.topic_id",
+      );
+      expect(body).toContain(
+        "required_topic.confidence >= 0.8",
+      );
+      expect(body).not.toContain(
+        "required_topic.topic_id = any(p_topic_ids)",
+      );
+    }
+  });
+
   it("keeps level, session and timezone filtering in the private past-paper RPC contract", async () => {
     const sql = await migration();
 

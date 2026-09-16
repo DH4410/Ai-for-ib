@@ -221,10 +221,16 @@ as $$
     and chunk.search_vector @@ plainto_tsquery('english', p_query)
     and (
       cardinality(p_topic_ids) = 0
-      or exists (
-        select 1 from content_chunk_topics required_topic
-        where required_topic.content_chunk_id = chunk.id
-          and required_topic.topic_id = any(p_topic_ids)
+      or not exists (
+        select 1
+        from unnest(p_topic_ids) requested(topic_id)
+        where not exists (
+          select 1
+          from content_chunk_topics required_topic
+          where required_topic.content_chunk_id = chunk.id
+            and required_topic.topic_id = requested.topic_id
+            and required_topic.confidence >= 0.8
+        )
       )
     )
   group by chunk.id, version.document_id
@@ -277,10 +283,16 @@ as $$
     and chunk.embedding is not null
     and (
       cardinality(p_topic_ids) = 0
-      or exists (
-        select 1 from content_chunk_topics required_topic
-        where required_topic.content_chunk_id = chunk.id
-          and required_topic.topic_id = any(p_topic_ids)
+      or not exists (
+        select 1
+        from unnest(p_topic_ids) requested(topic_id)
+        where not exists (
+          select 1
+          from content_chunk_topics required_topic
+          where required_topic.content_chunk_id = chunk.id
+            and required_topic.topic_id = requested.topic_id
+            and required_topic.confidence >= 0.8
+        )
       )
     )
   group by chunk.id, version.document_id
