@@ -108,6 +108,8 @@ export function TutorShell() {
   const [realPastPapers, setRealPastPapers] = useState(false);
   const [paperFilter, setPaperFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
+  const [sessionFilter, setSessionFilter] = useState("");
+  const [timezoneFilter, setTimezoneFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [realQuestionCount, setRealQuestionCount] =
     useState<1 | 3 | 5>(1);
@@ -202,8 +204,14 @@ export function TutorShell() {
                       : undefined,
                   paper: paperFilter || undefined,
                   questionCount: realQuestionCount,
+                  session:
+                    sessionFilter === "may" ||
+                    sessionFilter === "november"
+                      ? sessionFilter
+                      : undefined,
                   requireMarkscheme,
                   realPastPapersOnly: true,
+                  timezone: timezoneFilter || undefined,
                   years: yearFilter
                     ? [Number(yearFilter)]
                     : undefined,
@@ -315,6 +323,8 @@ export function TutorShell() {
                   setSubject(option.id);
                   setPaperFilter("");
                   setLevelFilter("");
+                  setSessionFilter("");
+                  setTimezoneFilter("");
                   setFocusedTopicId("");
                   setSelectedMarkSource(null);
                 }}
@@ -502,6 +512,37 @@ export function TutorShell() {
                     <option value="">Any level</option>
                     <option value="HL">HL</option>
                     <option value="SL">SL</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Session</span>
+                  <select
+                    aria-label="Past-paper session"
+                    onChange={(event) =>
+                      setSessionFilter(event.target.value)
+                    }
+                    value={sessionFilter}
+                  >
+                    <option value="">Any session</option>
+                    <option value="may">May</option>
+                    <option value="november">November</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Timezone</span>
+                  <select
+                    aria-label="Past-paper timezone"
+                    onChange={(event) =>
+                      setTimezoneFilter(event.target.value)
+                    }
+                    value={timezoneFilter}
+                  >
+                    <option value="">Any timezone</option>
+                    <option value="TZ1">TZ1</option>
+                    <option value="TZ2">TZ2</option>
+                    <option value="TZ3">TZ3</option>
                   </select>
                 </label>
 
