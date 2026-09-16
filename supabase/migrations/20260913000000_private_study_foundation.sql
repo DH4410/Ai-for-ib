@@ -1578,6 +1578,9 @@ revoke all on function public.search_private_past_paper_questions(
 revoke all on function public.get_private_past_paper_question(
   text
 ) from public, anon, authenticated;
+revoke all on function public.get_private_past_paper_asset(
+  text
+) from public, anon, authenticated;
 revoke all on function public.record_private_learning_attempt(
   uuid, jsonb, jsonb
 ) from public, anon, authenticated;
@@ -1604,6 +1607,9 @@ grant execute on function public.search_private_past_paper_questions(
   text, text, integer[], text, text, text, text, text[], boolean, integer
 ) to service_role;
 grant execute on function public.get_private_past_paper_question(
+  text
+) to service_role;
+grant execute on function public.get_private_past_paper_asset(
   text
 ) to service_role;
 grant execute on function public.record_private_learning_attempt(
