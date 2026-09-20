@@ -104,6 +104,8 @@ function toPastPaperSourceChunk(
     session: question.session,
     timezone: question.timezone,
     topicIds: question.topicIds,
+    visualContextRequired:
+      question.visualContextRequired,
     year: question.year,
   };
 }

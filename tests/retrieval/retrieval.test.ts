@@ -239,6 +239,40 @@ describe("study retrieval façade", () => {
     ]);
   });
 
+  it("returns visual-dependent real questions for practice while flagging the missing model visual context", async () => {
+    const visualQuestion = {
+      ...pairedQuestion,
+      id: "physics-m25-p2-q6",
+      questionNumber: "6",
+      questionText:
+        "Use the graph shown below to determine the gradient.",
+      visualContextRequired: true,
+      score: 0.95,
+    };
+    const retrieve = createStudyRetriever({
+      repository: new InMemoryStudySourceRepository(
+        [],
+        [visualQuestion],
+      ),
+    });
+
+    const result = await retrieve({
+      filters: {
+        realPastPapersOnly: true,
+      },
+      mode: "practice",
+      query: "gradient graph",
+      subject: "physics",
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "physics-m25-p2-q6",
+        visualContextRequired: true,
+      }),
+    ]);
+  });
+
   it("requires a paired paper and includes its official markscheme in mark mode", async () => {
     const retrieve = createStudyRetriever({
       repository: new InMemoryStudySourceRepository(

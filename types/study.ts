@@ -28,6 +28,7 @@ export type SourceChunk = {
   marks?: number | null;
   markschemeAvailable?: boolean;
   pairingStatus?: PastPaperPairingStatus;
+  visualContextRequired?: boolean;
 };
 
 export type ChatTurn = {
@@ -60,6 +61,7 @@ export type SourceCitation = Pick<
   | "marks"
   | "markschemeAvailable"
   | "pairingStatus"
+  | "visualContextRequired"
 >;
 
 export type TutorResponse = {

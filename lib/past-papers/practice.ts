@@ -17,7 +17,12 @@ export function formatRealPastPaperPractice(
         source.locator?.trim() ||
         `Real past-paper question ${index + 1}`;
 
-      return `${heading}\n\n${questionBody(source)}`;
+      const visualNote =
+        source.visualContextRequired
+          ? "\n\nVisual source required: open the original source page to see the graph/diagram. The tutor has not interpreted that visual."
+          : "";
+
+      return `${heading}\n\n${questionBody(source)}${visualNote}`;
     })
     .join("\n\n---\n\n");
 }

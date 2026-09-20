@@ -676,6 +676,7 @@ returns table (
   page_end integer,
   marks integer,
   pairing_status text,
+  visual_context_required boolean,
   score real
 )
 language sql
@@ -713,6 +714,8 @@ as $$
     question.page_end,
     question.marks,
     question.pairing_status,
+    cardinality(question.asset_references) > 0
+      as visual_context_required,
     ts_rank(
       question.search_vector,
       plainto_tsquery('english', p_query)
@@ -723,7 +726,6 @@ as $$
   left join private.past_paper_question_topics mapping
     on mapping.past_paper_question_id = question.id
   where question.subject = p_subject
-    and cardinality(question.asset_references) = 0
     and (
       cardinality(p_years) = 0
       or question.year = any(p_years)
@@ -797,6 +799,7 @@ returns table (
   page_end integer,
   marks integer,
   pairing_status text,
+  visual_context_required boolean,
   score real
 )
 language sql
@@ -835,6 +838,8 @@ as $$
     question.page_end,
     question.marks,
     question.pairing_status,
+    cardinality(question.asset_references) > 0
+      as visual_context_required,
     1::real as score
   from private.past_paper_questions question
   join private.documents question_document

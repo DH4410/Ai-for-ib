@@ -741,6 +741,13 @@ export function TutorShell() {
                           ) : null}
                           {source.documentType ===
                             "question-paper" &&
+                          source.visualContextRequired ? (
+                            <em className="paperStatus visual">
+                              Visual source required
+                            </em>
+                          ) : null}
+                          {source.documentType ===
+                            "question-paper" &&
                           source.pageStart ? (
                             <PrivateSourcePdf
                               source={source}
@@ -748,7 +755,8 @@ export function TutorShell() {
                           ) : null}
                           {turn.mode === "practice" &&
                           source.documentType ===
-                            "question-paper" ? (
+                            "question-paper" &&
+                          !source.visualContextRequired ? (
                             <button
                               onClick={() => {
                                 setSelectedMarkSource(source);
@@ -761,6 +769,13 @@ export function TutorShell() {
                                 ? "Mark this"
                                 : "Mark (no scheme)"}
                             </button>
+                          ) : turn.mode === "practice" &&
+                            source.documentType ===
+                              "question-paper" &&
+                            source.visualContextRequired ? (
+                            <span className="visualMarkingNote">
+                              Marking unavailable until verified vision support
+                            </span>
                           ) : null}
                         </div>
                       ))}

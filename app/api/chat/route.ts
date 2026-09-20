@@ -63,6 +63,8 @@ function toSourceCitation(
     timezone: source.timezone,
     title: source.title,
     topicIds: source.topicIds,
+    visualContextRequired:
+      source.visualContextRequired,
     year: source.year,
   };
 }

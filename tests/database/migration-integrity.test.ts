@@ -219,6 +219,39 @@ describe("Supabase migration integrity", () => {
     );
   });
 
+  it("allows visual-dependent questions in practice search but keeps exact marking text-only", async () => {
+    const sql = await migration();
+    const searchFunction = sql.slice(
+      sql.indexOf(
+        "create or replace function public.search_private_past_paper_questions",
+      ),
+      sql.indexOf(
+        "create or replace function public.get_private_past_paper_question",
+      ),
+    );
+    const exactFunction = sql.slice(
+      sql.indexOf(
+        "create or replace function public.get_private_past_paper_question",
+      ),
+      sql.indexOf(
+        "create or replace function public.get_private_past_paper_asset",
+      ),
+    );
+
+    expect(searchFunction).toContain(
+      "visual_context_required boolean",
+    );
+    expect(searchFunction).toContain(
+      "cardinality(question.asset_references) > 0",
+    );
+    expect(searchFunction).not.toContain(
+      "and cardinality(question.asset_references) = 0",
+    );
+    expect(exactFunction).toContain(
+      "and cardinality(question.asset_references) = 0",
+    );
+  });
+
   it("returns full paper identity fields for exact-question marking", async () => {
     const sql = await migration();
     const exactQuestion = sql.slice(

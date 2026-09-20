@@ -1404,3 +1404,16 @@ button {
   line-height: 1.45;
   padding-left: 8px;
 }
+
+
+.paperStatus.visual {
+  border-color: #66583b;
+  background: rgb(128 104 61 / 10%);
+  color: #b7a26f;
+}
+
+.visualMarkingNote {
+  color: #8f8265;
+  font-size: 9px;
+  line-height: 1.4;
+}
