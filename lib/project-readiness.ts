@@ -1,6 +1,12 @@
 import type { ManifestEvent } from "@/lib/study-source/types";
 import type { EvaluationCase } from "@/training/evaluation";
 import {
+  auditTrainingDataQuality,
+  trainingDataQualityBlockers,
+  trainingDataQualityWarnings,
+  type TrainingDataQualityAudit,
+} from "@/training/data-quality";
+import {
   auditTrainingSplit,
   hasTrainingSplitLeakage,
   type TrainingSplitAudit,
@@ -47,6 +53,7 @@ export type TrainingInputReadiness = {
   trainSummary?: TrainingDatasetSummary;
   benchmarkCount?: number;
   splitAudit?: TrainingSplitAudit;
+  dataQualityAudit?: TrainingDataQualityAudit;
   trainTopicCoverage?: SubjectTopicCoverage[];
   benchmarkTopicCoverage?: SubjectTopicCoverage[];
 };
@@ -266,6 +273,12 @@ export function summarizeTrainingReadiness(args: {
           args.benchmark,
         )
       : undefined;
+  const dataQualityAudit =
+    args.train
+      ? auditTrainingDataQuality(
+          args.train,
+        )
+      : undefined;
 
   if (
     splitAudit &&
@@ -273,6 +286,18 @@ export function summarizeTrainingReadiness(args: {
   ) {
     blockers.push(
       "train-benchmark-leakage-detected",
+    );
+  }
+  if (dataQualityAudit) {
+    blockers.push(
+      ...trainingDataQualityBlockers(
+        dataQualityAudit,
+      ),
+    );
+    warnings.push(
+      ...trainingDataQualityWarnings(
+        dataQualityAudit,
+      ),
     );
   }
 
@@ -303,6 +328,7 @@ export function summarizeTrainingReadiness(args: {
       ? summarizeTopicCoverage(args.benchmark)
       : undefined,
     blockers,
+    dataQualityAudit,
     privateFineTuneInputsReady:
       blockers.length === 0,
     splitAudit,

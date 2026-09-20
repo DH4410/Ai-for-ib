@@ -246,6 +246,51 @@ describe("project readiness", () => {
     ).toEqual(["physics-book"]);
   });
 
+  it("blocks contradictory duplicate training prompts and surfaces repetition warnings", () => {
+    const conflicting = parseTrainingExample({
+      completion: [
+        {
+          role: "assistant",
+          content:
+            "A contradictory synthetic response.",
+        },
+      ],
+      dataOrigin: "synthetic",
+      id: "physics-learn-002",
+      mode: "learn",
+      prompt: [
+        {
+          role: "user",
+          content:
+            "Teach me specific latent heat carefully.",
+        },
+      ],
+      subject: "physics",
+      tags: [],
+      topicIds: [
+        "physics.b.particulate-matter.specific-latent-heat",
+      ],
+    });
+
+    const report = buildProjectReadiness({
+      benchmark: [benchmark],
+      manifestEvents: [],
+      sources: [source],
+      train: [train, conflicting],
+    });
+
+    expect(report.training.blockers).toContain(
+      "conflicting-training-prompts",
+    );
+    expect(
+      report.training.privateFineTuneInputsReady,
+    ).toBe(false);
+    expect(
+      report.training.dataQualityAudit
+        ?.conflictingPromptPairs,
+    ).toHaveLength(1);
+  });
+
   it("blocks fine-tuning inputs only for missing files or leakage, not target shortfalls", () => {
     const missing = buildProjectReadiness({
       manifestEvents: [],
