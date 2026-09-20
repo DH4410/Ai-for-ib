@@ -966,6 +966,7 @@ begin
       v_past_paper_question_id
       and question.pairing_status = 'paired'
       and question.source_markscheme_document_id is not null
+      and question.markscheme_text is not null
       and nullif(btrim(question.markscheme_text), '') is not null;
 
     if not found then
