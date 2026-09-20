@@ -24,7 +24,8 @@
     "training:data-plan": "tsx scripts/plan-training-data.ts",
     "study:apply-ocr": "tsx scripts/apply-ocr.ts",
     "study:inspect": "tsx scripts/inspect-source.ts",
-    "model:check": "tsx scripts/check-model-endpoint.ts"
+    "model:check": "tsx scripts/check-model-endpoint.ts",
+    "training:audit-quality": "tsx scripts/audit-training-data-quality.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

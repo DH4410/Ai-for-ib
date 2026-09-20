@@ -150,6 +150,20 @@ If `microsoft/Phi-4-mini-instruct` wins the benchmark, add `--trust-remote-code`
 
 If a chosen model requires a Hugging Face token, enter it using Colab's secret/environment facilities. Never commit it to `.env`, a notebook cell, a JSONL file or Git.
 
+## Audit private training-data repetition before Colab
+
+Before spending GPU time, run:
+
+```bash
+npm run training:audit-quality -- training/private-data/train.jsonl
+```
+
+The audit never prints prompt/completion text. It reports example IDs, similarity scores and aggregate diversity only.
+
+It treats **the same normalized learner prompt with conflicting assistant completions** as a blocker because that teaches contradictory behavior. Exact duplicate examples, near-duplicate prompts and repeated completions are warnings to review rather than automatic failures.
+
+Use this alongside `training:audit-split`: the split audit prevents train/benchmark leakage, while the quality audit checks repetition and contradictions inside the training set itself.
+
 ## Evaluation rule
 
 Do not judge the model on training loss alone.
