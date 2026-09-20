@@ -130,7 +130,7 @@ npm run project:readiness
 
 For model work, use the guided `training/AI_for_IB_Colab.ipynb` notebook rather than assembling the training commands manually.
 
-See `docs/INGESTION.md`, `docs/PAST_PAPERS.md` and `training/README.md` for the operational workflows.
+See `docs/INGESTION.md`, `docs/PAST_PAPERS.md`, `docs/MODEL_SERVING.md` and `training/README.md` for the operational workflows.
 
 ## What still requires real private inputs/infrastructure
 
