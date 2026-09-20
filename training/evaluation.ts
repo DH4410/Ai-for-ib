@@ -11,9 +11,17 @@ import {
 
 type UnknownRecord = Record<string, unknown>;
 
+export type NumericExpectation = {
+  value: number;
+  absoluteTolerance?: number;
+  relativeTolerance?: number;
+  unitPhrases?: string[];
+};
+
 export type EvaluationRubric = {
   requiredConceptGroups: string[][];
   forbiddenPhrases: string[];
+  numericExpectations?: NumericExpectation[];
   maxWords?: number;
   shouldAskLearnerQuestion: boolean;
 };
@@ -31,6 +39,11 @@ export type MechanicalEvaluation = {
   conceptGroupsMatched: number;
   conceptGroupsTotal: number;
   conceptCoverage: number;
+  numericExpectationsMatched: number;
+  numericExpectationsTotal: number;
+  numericCoverage: number;
+  numericChecksPassed: boolean;
+  correctnessCoverage: number;
   forbiddenHits: string[];
   wordCount: number;
   withinWordLimit: boolean;
@@ -149,6 +162,84 @@ function parseRequiredConceptGroups(value: unknown): string[][] {
   });
 }
 
+
+function parseNumericExpectations(
+  value: unknown,
+): NumericExpectation[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value) || value.length > 16) {
+    throw new Error(
+      "rubric.numericExpectations must be an array with at most 16 values",
+    );
+  }
+
+  return value.map((item, index) => {
+    if (!isRecord(item)) {
+      throw new Error(
+        `rubric.numericExpectations[${index}] must be an object`,
+      );
+    }
+
+    const numericValue = item.value;
+    if (
+      typeof numericValue !== "number" ||
+      !Number.isFinite(numericValue)
+    ) {
+      throw new Error(
+        `rubric.numericExpectations[${index}].value must be a finite number`,
+      );
+    }
+
+    const absoluteTolerance =
+      item.absoluteTolerance;
+    if (
+      absoluteTolerance !== undefined &&
+      (typeof absoluteTolerance !== "number" ||
+        !Number.isFinite(absoluteTolerance) ||
+        absoluteTolerance < 0)
+    ) {
+      throw new Error(
+        `rubric.numericExpectations[${index}].absoluteTolerance must be a non-negative finite number`,
+      );
+    }
+
+    const relativeTolerance =
+      item.relativeTolerance;
+    if (
+      relativeTolerance !== undefined &&
+      (typeof relativeTolerance !== "number" ||
+        !Number.isFinite(relativeTolerance) ||
+        relativeTolerance < 0 ||
+        relativeTolerance > 1)
+    ) {
+      throw new Error(
+        `rubric.numericExpectations[${index}].relativeTolerance must be between 0 and 1`,
+      );
+    }
+
+    const unitPhrases = parseStringList(
+      item.unitPhrases,
+      `rubric.numericExpectations[${index}].unitPhrases`,
+      8,
+    );
+
+    return {
+      value: numericValue,
+      ...(absoluteTolerance !== undefined
+        ? { absoluteTolerance }
+        : {}),
+      ...(relativeTolerance !== undefined
+        ? { relativeTolerance }
+        : {}),
+      ...(unitPhrases.length > 0
+        ? { unitPhrases }
+        : {}),
+    };
+  });
+}
+
 function parseRubric(value: unknown): EvaluationRubric {
   if (!isRecord(value)) {
     throw new Error("rubric must be an object");
@@ -173,6 +264,9 @@ function parseRubric(value: unknown): EvaluationRubric {
   return {
     requiredConceptGroups: parseRequiredConceptGroups(value.requiredConceptGroups),
     forbiddenPhrases: parseStringList(value.forbiddenPhrases, "rubric.forbiddenPhrases"),
+    numericExpectations: parseNumericExpectations(
+      value.numericExpectations,
+    ),
     maxWords: maxWords as number | undefined,
     shouldAskLearnerQuestion: shouldAskLearnerQuestion === true,
   };
@@ -308,6 +402,58 @@ function wordCount(text: string): number {
   return normalized.length === 0 ? 0 : normalized.split(/\s+/).length;
 }
 
+
+function numericValues(text: string): number[] {
+  const matches = text
+    .replace(/−/g, "-")
+    .match(
+      /[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?/g,
+    ) ?? [];
+
+  return matches
+    .map(Number)
+    .filter(Number.isFinite);
+}
+
+function numericExpectationMatched(
+  expectation: NumericExpectation,
+  values: number[],
+  normalizedText: string,
+): boolean {
+  const absoluteTolerance =
+    expectation.absoluteTolerance ??
+    Math.max(
+      1e-9,
+      Math.abs(expectation.value) * 1e-9,
+    );
+  const relativeTolerance =
+    expectation.relativeTolerance ?? 0;
+  const tolerance = Math.max(
+    absoluteTolerance,
+    Math.abs(expectation.value) *
+      relativeTolerance,
+  );
+
+  const valueMatched = values.some(
+    (value) =>
+      Math.abs(value - expectation.value) <=
+      tolerance,
+  );
+  if (!valueMatched) {
+    return false;
+  }
+
+  return (
+    !expectation.unitPhrases ||
+    expectation.unitPhrases.length === 0 ||
+    expectation.unitPhrases.some((unit) =>
+      normalizedText.includes(
+        normalizeForMatching(unit),
+      ),
+    )
+  );
+}
+
 /**
  * Deterministic, deliberately limited checks.
  *
@@ -328,6 +474,33 @@ export function scoreEvaluationResponse(
     normalized.includes(normalizeForMatching(phrase)),
   );
 
+  const expectedNumerics =
+    rubric.numericExpectations ?? [];
+  const responseNumbers =
+    numericValues(responseText);
+  const numericExpectationsMatched =
+    expectedNumerics.filter((expectation) =>
+      numericExpectationMatched(
+        expectation,
+        responseNumbers,
+        normalized,
+      ),
+    ).length;
+  const numericExpectationsTotal =
+    expectedNumerics.length;
+  const numericCoverage =
+    numericExpectationsTotal === 0
+      ? 1
+      : numericExpectationsMatched /
+        numericExpectationsTotal;
+  const conceptCoverage =
+    conceptGroupsMatched /
+    rubric.requiredConceptGroups.length;
+  const correctnessCoverage =
+    numericExpectationsTotal === 0
+      ? conceptCoverage
+      : (conceptCoverage + numericCoverage) / 2;
+
   const words = wordCount(responseText);
   const withinWordLimit = rubric.maxWords === undefined || words <= rubric.maxWords;
   const askedLearnerQuestion = responseText.includes("?");
@@ -337,7 +510,14 @@ export function scoreEvaluationResponse(
   return {
     conceptGroupsMatched,
     conceptGroupsTotal: rubric.requiredConceptGroups.length,
-    conceptCoverage: conceptGroupsMatched / rubric.requiredConceptGroups.length,
+    conceptCoverage,
+    numericExpectationsMatched,
+    numericExpectationsTotal,
+    numericCoverage,
+    numericChecksPassed:
+      numericExpectationsMatched ===
+      numericExpectationsTotal,
+    correctnessCoverage,
     forbiddenHits,
     wordCount: words,
     withinWordLimit,
