@@ -84,3 +84,19 @@ export function sanitizeMarkAnswer(
     ? text
     : stripMarkSuggestion(text);
 }
+
+
+export function canRecordMarkResult(
+  source: SourceCitation | undefined,
+): boolean {
+  if (source?.documentType !== "question-paper") {
+    return true;
+  }
+
+  return (
+    source.pairingStatus === "paired" &&
+    source.markschemeAvailable === true &&
+    source.marks !== undefined &&
+    source.marks !== null
+  );
+}

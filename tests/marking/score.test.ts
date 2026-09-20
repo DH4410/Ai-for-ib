@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canRecordMarkResult,
   parseMarkSuggestion,
   recordableMarkSuggestion,
   stripMarkSuggestion,
@@ -101,6 +102,34 @@ describe("marker score footer", () => {
       maximumMarks: 5,
       score: 4,
     });
+  });
+
+  it("only allows paper mastery recording when an official paired scheme is available", () => {
+    expect(
+      canRecordMarkResult({
+        documentType: "question-paper",
+        id: "physics-q1",
+        marks: 3,
+        markschemeAvailable: true,
+        pairingStatus: "paired",
+        title: "Physics paper",
+      }),
+    ).toBe(true);
+
+    expect(
+      canRecordMarkResult({
+        documentType: "question-paper",
+        id: "physics-q1",
+        marks: 3,
+        markschemeAvailable: false,
+        pairingStatus: "question_only",
+        title: "Physics paper",
+      }),
+    ).toBe(false);
+
+    expect(
+      canRecordMarkResult(undefined),
+    ).toBe(true);
   });
 
   it("ignores impossible or non-final mark strings", () => {

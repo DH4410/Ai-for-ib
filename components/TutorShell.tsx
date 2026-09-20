@@ -12,6 +12,7 @@ import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
 import {
+  canRecordMarkResult,
   recordableMarkSuggestion,
   stripMarkSuggestion,
 } from "@/lib/marking/score";
@@ -767,7 +768,10 @@ export function TutorShell() {
                   ) : null}
                   {turn.role === "assistant" &&
                   turn.mode === "mark" &&
-                  turn.subject ? (
+                  turn.subject &&
+                  canRecordMarkResult(
+                    progressSource(turn),
+                  ) ? (
                     <RecordResult
                       source={progressSource(turn)}
                       subject={turn.subject}
@@ -778,6 +782,16 @@ export function TutorShell() {
                         markSuggestion(turn)?.score
                       }
                     />
+                  ) : turn.role === "assistant" &&
+                    turn.mode === "mark" &&
+                    progressSource(turn)?.documentType ===
+                      "question-paper" ? (
+                    <p className="unscoredPaperNote">
+                      Qualitative feedback only · this paper
+                      question has no verified paired official
+                      markscheme, so it cannot be saved as an
+                      official scored attempt.
+                    </p>
                   ) : null}
                 </article>
               ))}

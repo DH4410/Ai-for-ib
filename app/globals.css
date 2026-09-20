@@ -1394,3 +1394,13 @@ button {
     display: none;
   }
 }
+
+
+.unscoredPaperNote {
+  margin: 9px 0 0;
+  border-left: 2px solid #66583b;
+  color: #9d9278;
+  font-size: 10px;
+  line-height: 1.45;
+  padding-left: 8px;
+}
