@@ -4,9 +4,11 @@ import tempfile
 import unittest
 
 from training.compare_adapter import (
+    aggregate_by,
     aggregate_results,
     classify_case,
     comparison_delta,
+    grouped_regressions,
     mechanical_promotion_gate,
     validate_adapter_base,
 )
@@ -76,6 +78,49 @@ class AdapterComparisonHelpersTest(unittest.TestCase):
                 "guardrailPassRate": 0.0,
                 "latencySeconds": 0.5,
             },
+        )
+
+    def test_reports_subject_or_mode_regressions_separately(self):
+        base_results = [
+            {
+                "subject": "physics",
+                "mode": "mark",
+                "latencySeconds": 2.0,
+                "mechanical": {
+                    "conceptCoverage": 1.0,
+                    "correctnessCoverage": 1.0,
+                    "guardrailsPassed": True,
+                },
+            }
+        ]
+        adapter_results = [
+            {
+                "subject": "physics",
+                "mode": "mark",
+                "latencySeconds": 2.0,
+                "mechanical": {
+                    "conceptCoverage": 1.0,
+                    "correctnessCoverage": 0.5,
+                    "guardrailsPassed": True,
+                },
+            }
+        ]
+
+        regressions = grouped_regressions(
+            aggregate_by(
+                base_results,
+                "subject",
+            ),
+            aggregate_by(
+                adapter_results,
+                "subject",
+            ),
+            "subject",
+        )
+
+        self.assertEqual(
+            regressions,
+            ["subject:physics:correctness"],
         )
 
     def test_prioritizes_new_guardrail_failures_and_lower_concept_coverage(self):

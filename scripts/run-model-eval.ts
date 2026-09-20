@@ -151,6 +151,31 @@ function aggregate(
   };
 }
 
+function aggregateBy(
+  reports: CaseReport[],
+  key: "subject" | "mode",
+  modelKey: "baseline" | "candidate",
+): Record<string, Record<string, number>> {
+  const labels = [
+    ...new Set(
+      reports.map((report) => report[key]),
+    ),
+  ].sort();
+
+  return Object.fromEntries(
+    labels.map((label) => [
+      label,
+      aggregate(
+        reports.filter(
+          (report) => report[key] === label,
+        ),
+        modelKey,
+      ),
+    ]),
+  );
+}
+
+
 async function main(): Promise<void> {
   const benchmarkPath = process.argv[2];
   if (!benchmarkPath || benchmarkPath === "--help") {
@@ -195,6 +220,30 @@ async function main(): Promise<void> {
     summary: {
       baseline: aggregate(reports, "baseline"),
       candidate: aggregate(reports, "candidate"),
+      bySubject: {
+        baseline: aggregateBy(
+          reports,
+          "subject",
+          "baseline",
+        ),
+        candidate: aggregateBy(
+          reports,
+          "subject",
+          "candidate",
+        ),
+      },
+      byMode: {
+        baseline: aggregateBy(
+          reports,
+          "mode",
+          "baseline",
+        ),
+        candidate: aggregateBy(
+          reports,
+          "mode",
+          "candidate",
+        ),
+      },
     },
     cases: reports,
   };

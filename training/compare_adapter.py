@@ -104,6 +104,62 @@ def aggregate_results(
     }
 
 
+def aggregate_by(
+    results: list[dict[str, Any]],
+    key: str,
+) -> dict[str, dict[str, float]]:
+    labels = sorted(
+        {
+            str(result.get(key))
+            for result in results
+            if result.get(key) is not None
+        }
+    )
+    return {
+        label: aggregate_results(
+            [
+                result
+                for result in results
+                if str(result.get(key)) == label
+            ]
+        )
+        for label in labels
+    }
+
+
+def grouped_regressions(
+    base_groups: dict[str, dict[str, float]],
+    adapter_groups: dict[str, dict[str, float]],
+    axis: str,
+) -> list[str]:
+    regressions: list[str] = []
+
+    for label, base in base_groups.items():
+        adapter = adapter_groups.get(label)
+        if adapter is None:
+            regressions.append(
+                f"{axis}:{label}:missing"
+            )
+            continue
+
+        if (
+            adapter["averageCorrectnessCoverage"]
+            < base["averageCorrectnessCoverage"]
+        ):
+            regressions.append(
+                f"{axis}:{label}:correctness"
+            )
+        if (
+            adapter["guardrailPassRate"]
+            < base["guardrailPassRate"]
+        ):
+            regressions.append(
+                f"{axis}:{label}:guardrails"
+            )
+
+    return regressions
+
+
 def classify_case(
     base_mechanical: dict[str, Any],
     adapter_mechanical: dict[str, Any],
@@ -146,6 +202,7 @@ def mechanical_promotion_gate(
     base: dict[str, float],
     adapter: dict[str, float],
     classification_counts: dict[str, int],
+    group_regressions: list[str] | None = None,
 ) -> dict[str, Any]:
     reasons: list[str] = []
 
@@ -163,6 +220,10 @@ def mechanical_promotion_gate(
         < base["guardrailPassRate"]
     ):
         reasons.append("guardrail-pass-rate-regressed")
+    for regression in group_regressions or []:
+        reasons.append(
+            f"group-regression:{regression}"
+        )
 
     return {
         "mechanicalPassed": len(reasons) == 0,
@@ -295,6 +356,34 @@ def main() -> None:
     adapter_summary = aggregate_results(
         adapter_results,
     )
+    base_by_subject = aggregate_by(
+        base_results,
+        "subject",
+    )
+    adapter_by_subject = aggregate_by(
+        adapter_results,
+        "subject",
+    )
+    base_by_mode = aggregate_by(
+        base_results,
+        "mode",
+    )
+    adapter_by_mode = aggregate_by(
+        adapter_results,
+        "mode",
+    )
+    group_regression_list = [
+        *grouped_regressions(
+            base_by_subject,
+            adapter_by_subject,
+            "subject",
+        ),
+        *grouped_regressions(
+            base_by_mode,
+            adapter_by_mode,
+            "mode",
+        ),
+    ]
 
     paired_cases = []
     for benchmark_case, base_case, adapter_case in zip(
@@ -354,6 +443,7 @@ def main() -> None:
         base_summary,
         adapter_summary,
         classification_counts,
+        group_regression_list,
     )
 
     output = {
@@ -367,9 +457,18 @@ def main() -> None:
         ),
         "summary": {
             "base": base_summary,
+            "adapter": adapter_summary,
+            "bySubject": {
+                "base": base_by_subject,
+                "adapter": adapter_by_subject,
+            },
+            "byMode": {
+                "base": base_by_mode,
+                "adapter": adapter_by_mode,
+            },
+            "groupRegressions": group_regression_list,
             "caseClassifications":
                 classification_counts,
-            "adapter": adapter_summary,
             "deltaAdapterMinusBase": comparison_delta(
                 base_summary,
                 adapter_summary,

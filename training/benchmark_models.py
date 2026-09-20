@@ -287,6 +287,70 @@ def average(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
+def aggregate_mechanical(
+    results: list[dict[str, Any]],
+) -> dict[str, float]:
+    if not results:
+        return {
+            "averageConceptCoverage": 0.0,
+            "averageCorrectnessCoverage": 0.0,
+            "guardrailPassRate": 0.0,
+            "averageLatencySeconds": 0.0,
+        }
+
+    return {
+        "averageConceptCoverage": average(
+            [
+                result["mechanical"]["conceptCoverage"]
+                for result in results
+            ]
+        ),
+        "averageCorrectnessCoverage": average(
+            [
+                result["mechanical"]["correctnessCoverage"]
+                for result in results
+            ]
+        ),
+        "guardrailPassRate": average(
+            [
+                1.0
+                if result["mechanical"]["guardrailsPassed"]
+                else 0.0
+                for result in results
+            ]
+        ),
+        "averageLatencySeconds": average(
+            [
+                float(result["latencySeconds"])
+                for result in results
+            ]
+        ),
+    }
+
+
+def aggregate_by(
+    results: list[dict[str, Any]],
+    key: str,
+) -> dict[str, dict[str, float]]:
+    labels = sorted(
+        {
+            str(result.get(key))
+            for result in results
+            if result.get(key) is not None
+        }
+    )
+    return {
+        label: aggregate_mechanical(
+            [
+                result
+                for result in results
+                if str(result.get(key)) == label
+            ]
+        )
+        for label in labels
+    }
+
+
 def load_model(candidate: Candidate):
     compute_dtype = (
         torch.bfloat16
@@ -405,36 +469,22 @@ def benchmark_candidate(
                 f"{case.get('id', '')}"
             )
 
-        concept_coverage = average(
-            [
-                result["mechanical"]["conceptCoverage"]
-                for result in results
-            ]
+        overall = aggregate_mechanical(results)
+        by_subject = aggregate_by(
+            results,
+            "subject",
         )
-        correctness_coverage = average(
-            [
-                result["mechanical"]["correctnessCoverage"]
-                for result in results
-            ]
-        )
-        guardrail_pass_rate = average(
-            [
-                1.0
-                if result["mechanical"]["guardrailsPassed"]
-                else 0.0
-                for result in results
-            ]
-        )
-        average_latency = average(
-            [result["latencySeconds"] for result in results]
+        by_mode = aggregate_by(
+            results,
+            "mode",
         )
         peak_vram_gib = (
             torch.cuda.max_memory_allocated()
             / (1024 ** 3)
         )
         mechanical_score = (
-            correctness_coverage * 0.7
-            + guardrail_pass_rate * 0.3
+            overall["averageCorrectnessCoverage"] * 0.7
+            + overall["guardrailPassRate"] * 0.3
         )
 
         return {
@@ -444,10 +494,9 @@ def benchmark_candidate(
             "enableThinking": candidate.enable_thinking,
             "status": "completed",
             "summary": {
-                "averageConceptCoverage": concept_coverage,
-                "averageCorrectnessCoverage": correctness_coverage,
-                "guardrailPassRate": guardrail_pass_rate,
-                "averageLatencySeconds": average_latency,
+                **overall,
+                "bySubject": by_subject,
+                "byMode": by_mode,
                 "peakAllocatedVramGiB": peak_vram_gib,
                 "mechanicalSelectionScore": mechanical_score,
             },
