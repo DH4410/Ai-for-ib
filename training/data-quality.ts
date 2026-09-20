@@ -23,9 +23,9 @@ function normalize(
 ): string {
   return value
     .toLocaleLowerCase()
-    .replace(/[^p{L}p{N}]+/gu, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
-    .replace(/s+/g, " ");
+    .replace(/\s+/g, " ");
 }
 
 function promptText(
