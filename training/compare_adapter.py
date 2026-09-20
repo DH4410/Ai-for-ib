@@ -69,12 +69,20 @@ def aggregate_results(
     if not results:
         return {
             "averageConceptCoverage": 0.0,
+            "averageCorrectnessCoverage": 0.0,
             "guardrailPassRate": 0.0,
             "averageLatencySeconds": 0.0,
         }
 
     concept_coverage = sum(
         result["mechanical"]["conceptCoverage"]
+        for result in results
+    ) / len(results)
+    correctness_coverage = sum(
+        result["mechanical"].get(
+            "correctnessCoverage",
+            result["mechanical"]["conceptCoverage"],
+        )
         for result in results
     ) / len(results)
     guardrail_pass_rate = sum(
@@ -90,6 +98,7 @@ def aggregate_results(
 
     return {
         "averageConceptCoverage": concept_coverage,
+        "averageCorrectnessCoverage": correctness_coverage,
         "guardrailPassRate": guardrail_pass_rate,
         "averageLatencySeconds": latency,
     }
@@ -100,10 +109,16 @@ def classify_case(
     adapter_mechanical: dict[str, Any],
 ) -> str:
     base_coverage = float(
-        base_mechanical["conceptCoverage"]
+        base_mechanical.get(
+            "correctnessCoverage",
+            base_mechanical["conceptCoverage"],
+        )
     )
     adapter_coverage = float(
-        adapter_mechanical["conceptCoverage"]
+        adapter_mechanical.get(
+            "correctnessCoverage",
+            adapter_mechanical["conceptCoverage"],
+        )
     )
     base_guardrails = bool(
         base_mechanical["guardrailsPassed"]
@@ -137,10 +152,12 @@ def mechanical_promotion_gate(
     if classification_counts.get("regression", 0) > 0:
         reasons.append("mechanical-case-regressions-present")
     if (
-        adapter["averageConceptCoverage"]
-        < base["averageConceptCoverage"]
+        adapter["averageCorrectnessCoverage"]
+        < base["averageCorrectnessCoverage"]
     ):
-        reasons.append("average-concept-coverage-regressed")
+        reasons.append(
+            "average-correctness-coverage-regressed"
+        )
     if (
         adapter["guardrailPassRate"]
         < base["guardrailPassRate"]
@@ -162,6 +179,9 @@ def comparison_delta(
         "conceptCoverage":
             adapter["averageConceptCoverage"]
             - base["averageConceptCoverage"],
+        "correctnessCoverage":
+            adapter["averageCorrectnessCoverage"]
+            - base["averageCorrectnessCoverage"],
         "guardrailPassRate":
             adapter["guardrailPassRate"]
             - base["guardrailPassRate"],

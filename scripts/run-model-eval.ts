@@ -138,6 +138,12 @@ function aggregate(
     averageConceptCoverage: average(
       results.map(({ mechanical }) => mechanical.conceptCoverage),
     ),
+    averageCorrectnessCoverage: average(
+      results.map(
+        ({ mechanical }) =>
+          mechanical.correctnessCoverage,
+      ),
+    ),
     guardrailPassRate:
       results.filter(({ mechanical }) => mechanical.guardrailsPassed).length /
       results.length,

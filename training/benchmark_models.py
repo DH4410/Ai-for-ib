@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import math
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -148,6 +150,57 @@ def normalize(text: str) -> str:
     return " ".join(text.lower().split())
 
 
+def numeric_values(text: str) -> list[float]:
+    return [
+        float(value)
+        for value in re.findall(
+            r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?",
+            text.replace("−", "-"),
+        )
+    ]
+
+
+def numeric_expectation_matched(
+    expectation: dict[str, Any],
+    values: list[float],
+    normalized_text: str,
+) -> bool:
+    expected = float(expectation["value"])
+    absolute_tolerance = float(
+        expectation.get(
+            "absoluteTolerance",
+            max(1e-9, abs(expected) * 1e-9),
+        )
+    )
+    relative_tolerance = float(
+        expectation.get("relativeTolerance", 0.0)
+    )
+    tolerance = max(
+        absolute_tolerance,
+        abs(expected) * relative_tolerance,
+    )
+    value_matched = any(
+        math.isclose(
+            value,
+            expected,
+            rel_tol=0.0,
+            abs_tol=tolerance,
+        )
+        for value in values
+    )
+    if not value_matched:
+        return False
+
+    unit_phrases = expectation.get("unitPhrases", [])
+    return (
+        not unit_phrases
+        or any(
+            normalize(str(unit)) in normalized_text
+            for unit in unit_phrases
+        )
+    )
+
+
 def score_response(text: str, rubric: dict[str, Any]) -> dict[str, Any]:
     normalized = normalize(text)
     groups = rubric.get("requiredConceptGroups", [])
@@ -165,6 +218,27 @@ def score_response(text: str, rubric: dict[str, Any]) -> dict[str, Any]:
         for phrase in forbidden_phrases
         if normalize(phrase) in normalized
     ]
+    numeric_expectations = rubric.get(
+        "numericExpectations",
+        [],
+    )
+    numbers = numeric_values(text)
+    numeric_matched = sum(
+        1
+        for expectation in numeric_expectations
+        if numeric_expectation_matched(
+            expectation,
+            numbers,
+            normalized,
+        )
+    )
+    numeric_total = len(numeric_expectations)
+    numeric_coverage = (
+        numeric_matched / numeric_total
+        if numeric_total
+        else 1.0
+    )
+
     word_count = len(text.split())
     max_words = rubric.get("maxWords")
     within_word_limit = (
@@ -179,11 +253,23 @@ def score_response(text: str, rubric: dict[str, Any]) -> dict[str, Any]:
     )
     total = len(groups)
     concept_coverage = matched / total if total else 0.0
+    correctness_coverage = (
+        (concept_coverage + numeric_coverage) / 2
+        if numeric_total
+        else concept_coverage
+    )
 
     return {
         "conceptGroupsMatched": matched,
         "conceptGroupsTotal": total,
         "conceptCoverage": concept_coverage,
+        "numericExpectationsMatched": numeric_matched,
+        "numericExpectationsTotal": numeric_total,
+        "numericCoverage": numeric_coverage,
+        "numericChecksPassed": (
+            numeric_matched == numeric_total
+        ),
+        "correctnessCoverage": correctness_coverage,
         "forbiddenHits": forbidden_hits,
         "wordCount": word_count,
         "withinWordLimit": within_word_limit,
@@ -325,6 +411,12 @@ def benchmark_candidate(
                 for result in results
             ]
         )
+        correctness_coverage = average(
+            [
+                result["mechanical"]["correctnessCoverage"]
+                for result in results
+            ]
+        )
         guardrail_pass_rate = average(
             [
                 1.0
@@ -341,7 +433,7 @@ def benchmark_candidate(
             / (1024 ** 3)
         )
         mechanical_score = (
-            concept_coverage * 0.7
+            correctness_coverage * 0.7
             + guardrail_pass_rate * 0.3
         )
 
@@ -353,6 +445,7 @@ def benchmark_candidate(
             "status": "completed",
             "summary": {
                 "averageConceptCoverage": concept_coverage,
+                "averageCorrectnessCoverage": correctness_coverage,
                 "guardrailPassRate": guardrail_pass_rate,
                 "averageLatencySeconds": average_latency,
                 "peakAllocatedVramGiB": peak_vram_gib,

@@ -86,6 +86,41 @@ describe("private model evaluation", () => {
     });
   });
 
+  it("checks expected numeric answers with tolerance and units without mistaking concept words for correctness", () => {
+    const rubric = {
+      ...validCase.rubric,
+      numericExpectations: [
+        {
+          value: 3,
+          absoluteTolerance: 0.01,
+          unitPhrases: ["m/s²", "m s-2"],
+        },
+      ],
+    };
+
+    expect(
+      scoreEvaluationResponse(
+        "Using F = ma gives an acceleration of 3.00 m/s².",
+        rubric,
+      ),
+    ).toMatchObject({
+      numericExpectationsMatched: 1,
+      numericExpectationsTotal: 1,
+      numericCoverage: 1,
+      numericChecksPassed: true,
+    });
+
+    const wrong = scoreEvaluationResponse(
+      "Using F = ma gives an acceleration of 4.00 m/s².",
+      rubric,
+    );
+    expect(wrong.numericCoverage).toBe(0);
+    expect(wrong.numericChecksPassed).toBe(false);
+    expect(wrong.correctnessCoverage).toBeLessThan(
+      wrong.conceptCoverage,
+    );
+  });
+
   it("detects forbidden phrases, excessive length and a missing learner question", () => {
     const result = scoreEvaluationResponse(
       `Because it just does. ${"word ".repeat(130)}`,
