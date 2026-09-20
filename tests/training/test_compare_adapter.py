@@ -49,6 +49,7 @@ class AdapterComparisonHelpersTest(unittest.TestCase):
                     "latencySeconds": 2.0,
                     "mechanical": {
                         "conceptCoverage": 0.5,
+                        "correctnessCoverage": 0.4,
                         "guardrailsPassed": True,
                     },
                 }
@@ -60,6 +61,7 @@ class AdapterComparisonHelpersTest(unittest.TestCase):
                     "latencySeconds": 2.5,
                     "mechanical": {
                         "conceptCoverage": 0.75,
+                        "correctnessCoverage": 0.8,
                         "guardrailsPassed": True,
                     },
                 }
@@ -70,6 +72,7 @@ class AdapterComparisonHelpersTest(unittest.TestCase):
             comparison_delta(base, adapter),
             {
                 "conceptCoverage": 0.25,
+                "correctnessCoverage": 0.4,
                 "guardrailPassRate": 0.0,
                 "latencySeconds": 0.5,
             },
@@ -127,11 +130,13 @@ class AdapterComparisonHelpersTest(unittest.TestCase):
     def test_mechanical_promotion_gate_requires_no_regressions_and_human_review(self):
         base = {
             "averageConceptCoverage": 0.7,
+            "averageCorrectnessCoverage": 0.68,
             "guardrailPassRate": 0.9,
             "averageLatencySeconds": 2.0,
         }
         adapter = {
             "averageConceptCoverage": 0.75,
+            "averageCorrectnessCoverage": 0.76,
             "guardrailPassRate": 0.9,
             "averageLatencySeconds": 2.2,
         }

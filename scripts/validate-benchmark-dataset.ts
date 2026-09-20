@@ -42,6 +42,8 @@ async function main(): Promise<void> {
   ) as Record<string, number>;
 
   let conceptGroups = 0;
+  let numericExpectationCases = 0;
+  let numericExpectations = 0;
   let taggedWithTopics = 0;
   const uniqueTopicIds = new Set<string>();
   for (const benchmarkCase of cases) {
@@ -49,6 +51,12 @@ async function main(): Promise<void> {
     byMode[benchmarkCase.mode] += 1;
     conceptGroups +=
       benchmarkCase.rubric.requiredConceptGroups.length;
+    const caseNumerics =
+      benchmarkCase.rubric.numericExpectations?.length ?? 0;
+    if (caseNumerics > 0) {
+      numericExpectationCases += 1;
+      numericExpectations += caseNumerics;
+    }
     if ((benchmarkCase.topicIds?.length ?? 0) > 0) {
       taggedWithTopics += 1;
       benchmarkCase.topicIds?.forEach((topicId) =>
@@ -63,6 +71,8 @@ async function main(): Promise<void> {
         total: cases.length,
         bySubject,
         byMode,
+        numericExpectationCases,
+        numericExpectations,
         requiredConceptGroups: conceptGroups,
         taggedWithTopics,
         untaggedCases: cases.length - taggedWithTopics,

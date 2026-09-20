@@ -182,8 +182,11 @@ Each case defines:
 - the conversation prompt;
 - required concept groups, where any phrase in a group can satisfy that concept;
 - optional forbidden phrases;
+- optional `numericExpectations` for direct-solution/marking cases, with absolute/relative tolerance and optional unit phrases;
 - an optional word limit;
 - whether the response should ask the learner a question.
+
+Numeric checks are optional on purpose. Use them when the benchmark response should contain a definite calculated value. Do not add them to hints-first cases where withholding the final answer is the desired tutoring behaviour.
 
 The deterministic checks are intentionally limited. They are useful for comparing the same cases across two models, but final correctness and pedagogy still need human review.
 
