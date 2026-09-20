@@ -966,6 +966,25 @@ function reasonFor(
   return `Matched the ${type} phrase '${phrase}'.`;
 }
 
+
+function keywordConfidence(
+  phrase: string,
+): number {
+  const words = phrase
+    .split(" ")
+    .filter(Boolean);
+
+  // Multi-word curated aliases and long technical terms are specific
+  // enough to satisfy the database's strict focused-topic threshold.
+  // Short single words remain advisory to avoid over-routing generic text.
+  return (
+    words.length >= 2 ||
+    phraseSpecificity(phrase) >= 12
+  )
+    ? 0.86
+    : 0.76;
+}
+
 export function classifyTopics(
   input: TopicClassificationInput,
 ): TopicClassification {
@@ -1018,7 +1037,9 @@ export function classifyTopics(
   );
   if (keywordRule) {
     return {
-      confidence: 0.76,
+      confidence: keywordConfidence(
+        keywordRule.phrase,
+      ),
       method: "keyword_rule",
       reason: reasonFor(
         keywordRule.phrase,

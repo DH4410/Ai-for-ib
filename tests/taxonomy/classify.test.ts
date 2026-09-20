@@ -90,7 +90,7 @@ describe("IBDP topic classification", () => {
         title: "Phase change",
       }),
     ).toMatchObject({
-      confidence: 0.76,
+      confidence: 0.86,
       method: "keyword_rule",
       topicIds: [
         "physics.b.particulate-matter.specific-latent-heat",
@@ -111,6 +111,23 @@ describe("IBDP topic classification", () => {
     });
   });
 
+  it("keeps short generic keyword matches below the strict focused-topic threshold", () => {
+    expect(
+      classifyTopics({
+        subject: "physics",
+        text:
+          "This section introduces quantum ideas.",
+        title: "Discussion",
+      }),
+    ).toMatchObject({
+      confidence: 0.76,
+      method: "keyword_rule",
+      topicIds: [
+        "physics.e.quantum-physics",
+      ],
+    });
+  });
+
   it("recognizes common Chemistry terminology outside official headings", () => {
     expect(
       classifyTopics({
@@ -120,6 +137,7 @@ describe("IBDP topic classification", () => {
         title: "Worked example",
       }),
     ).toMatchObject({
+      confidence: 0.86,
       method: "keyword_rule",
       topicIds: [
         "chemistry.reactivity.amount-rate-extent.rate",
