@@ -111,7 +111,7 @@ describe("private model evaluation", () => {
     });
 
     const wrong = scoreEvaluationResponse(
-      "Using F = ma gives an acceleration of 4.00 m/s².",
+      "Particles have more kinetic energy, collisions happen more often, and more collisions have enough energy to react. The calculated value is 4.00 m/s².",
       rubric,
     );
     expect(wrong.numericCoverage).toBe(0);
