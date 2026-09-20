@@ -13,7 +13,7 @@ AI for IB is a private, standalone tutor for **IB Physics, Chemistry and Mathema
 - A safe, authenticated **Source Library** showing indexed source names/counts without paths, raw text or provider credentials.
 - Structured real-past-paper retrieval with year/paper/topic filters.
 - Conservative question/markscheme pairing: missing schemes stay `question_only`; ambiguous matches are never guessed.
-- Visual-dependent paper questions are withheld until their figures can be preserved/rendered.
+- Visual-dependent real-paper questions can be used for practice with an authenticated link to the exact original private PDF page. They are explicitly flagged as visual-required and cannot enter text-only marking until a verified vision path exists.
 - Magic-link sign-in and private learner progress.
 - Deterministic mastery updates, spaced review dates, confidence/hint evidence and recurring mistake tags.
 - Saved mastery/mistakes personalize future tutor prompts without overriding source evidence or official marking criteria.

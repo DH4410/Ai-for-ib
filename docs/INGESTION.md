@@ -203,7 +203,7 @@ The browser never queries the private source database directly. After private re
 ## Current limitations
 
 - OCR-required pages now have an explicit private repair/apply workflow, but the repository intentionally does not force one OCR engine.
-- Paper figures/graphs/diagrams are not yet extracted; visual-dependent questions are withheld from retrieval.
+- Paper figures/graphs/diagrams are not yet extracted into model-readable visual inputs. Visual-dependent questions can be surfaced for human practice through the authenticated original-PDF viewer, but text-only marking remains blocked.
 
 
 ## ManageBac MCP handoff
