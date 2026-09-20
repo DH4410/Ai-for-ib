@@ -86,7 +86,7 @@ describe("training data quality audit", () => {
           ),
           example(
             "physics-learn-011",
-            "Explain why temperature stays constant when ice melts, then ask me one check question.",
+            "Explain why temperature stays constant while ice melts and ask me one check question.",
             "Use energy and state change ideas.",
           ),
         ],
