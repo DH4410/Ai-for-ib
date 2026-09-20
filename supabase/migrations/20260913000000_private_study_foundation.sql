@@ -941,23 +941,36 @@ begin
   end if;
 
   if v_past_paper_question_id is not null then
+    if not exists (
+      select 1
+      from private.past_paper_questions question
+      where question.id =
+        v_past_paper_question_id
+        and question.subject = v_subject
+        and exists (
+          select 1
+          from private.past_paper_question_topics mapping
+          where mapping.past_paper_question_id =
+            question.id
+            and mapping.topic_id = v_topic_id
+        )
+    ) then
+      raise exception
+        'past-paper question does not match the attempt subject/topic';
+    end if;
+
     select question.marks
     into v_question_marks
     from private.past_paper_questions question
     where question.id =
       v_past_paper_question_id
-      and question.subject = v_subject
-      and exists (
-        select 1
-        from private.past_paper_question_topics mapping
-        where mapping.past_paper_question_id =
-          question.id
-          and mapping.topic_id = v_topic_id
-      );
+      and question.pairing_status = 'paired'
+      and question.source_markscheme_document_id is not null
+      and nullif(btrim(question.markscheme_text), '') is not null;
 
     if not found then
       raise exception
-        'past-paper question does not match the attempt subject/topic';
+        'past-paper score requires a paired official markscheme';
     end if;
 
     if v_question_marks is not null
