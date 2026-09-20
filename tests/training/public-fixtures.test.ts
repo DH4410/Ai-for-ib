@@ -36,7 +36,13 @@ describe("public synthetic training fixtures", () => {
       ),
     );
 
-    expect(cases).toHaveLength(12);
+    expect(cases).toHaveLength(15);
+    expect(
+      cases.filter(
+        ({ rubric }) =>
+          (rubric.numericExpectations?.length ?? 0) > 0,
+      ),
+    ).toHaveLength(3);
     expect(
       [...new Set(
         cases.map(

@@ -175,7 +175,7 @@ The repository has a stable model API boundary, so the best approach is to bench
 
 Training/validation loss does not tell us whether the tutor became better. Use the private rubric-based `benchmark.jsonl` and compare the unmodified base model with the candidate model through the same OpenAI-compatible API.
 
-A 12-case synthetic schema example is committed as `training/benchmark.example.jsonl`. Real benchmark files are private and blocked from Git.
+A 15-case synthetic schema example is committed as `training/benchmark.example.jsonl`. Real benchmark files are private and blocked from Git.
 
 Each case defines:
 
