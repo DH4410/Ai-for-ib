@@ -8,8 +8,10 @@ import {
 } from "@/training/data-quality";
 import {
   auditTrainingSplit,
+  auditValidationSplit,
   hasTrainingSplitLeakage,
   type TrainingSplitAudit,
+  type ValidationSplitAudit,
 } from "@/training/split-audit";
 import {
   summarizeTrainingExamples,
@@ -53,6 +55,7 @@ export type TrainingInputReadiness = {
   trainSummary?: TrainingDatasetSummary;
   benchmarkCount?: number;
   splitAudit?: TrainingSplitAudit;
+  validationSplitAudit?: ValidationSplitAudit;
   dataQualityAudit?: TrainingDataQualityAudit;
   trainTopicCoverage?: SubjectTopicCoverage[];
   benchmarkTopicCoverage?: SubjectTopicCoverage[];
@@ -265,6 +268,20 @@ export function summarizeTrainingReadiness(args: {
   if (!benchmarkPresent) {
     blockers.push("private-benchmark-jsonl-missing");
   }
+  if (args.train?.length === 0) blockers.push("private-train-jsonl-empty");
+  if (args.benchmark?.length === 0) blockers.push("private-benchmark-jsonl-empty");
+  if (args.validation?.length === 0) blockers.push("private-validation-jsonl-empty");
+
+  const validationSplitAudit = args.train && args.validation
+    ? auditValidationSplit(args.train, args.validation, args.benchmark)
+    : undefined;
+  if (validationSplitAudit && hasTrainingSplitLeakage(validationSplitAudit.trainValidation)) {
+    blockers.push("train-validation-leakage-detected");
+  }
+  if (validationSplitAudit?.validationBenchmark &&
+      hasTrainingSplitLeakage(validationSplitAudit.validationBenchmark)) {
+    blockers.push("validation-benchmark-leakage-detected");
+  }
 
   const splitAudit =
     args.train && args.benchmark
@@ -340,6 +357,7 @@ export function summarizeTrainingReadiness(args: {
       ? summarizeTopicCoverage(args.train)
       : undefined,
     validationPresent,
+    validationSplitAudit,
     warnings,
   };
 }

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { learnerTaskKey } from "@/training/split-audit";
+
 import type {
   TrainingExample,
   TrainingMode,
@@ -37,49 +39,56 @@ export function splitSftExamples(
     );
   }
 
-  const groups = new Map<
-    string,
-    TrainingExample[]
-  >();
-
+  // Group exact learner tasks across cells: an ID or system-message change
+  // must not put the same task on both sides of the split.
+  const groups = new Map<string, TrainingExample[]>();
+  const remaining = new Map<string, number>();
   for (const example of examples) {
-    const key = cellKey(example);
-    groups.set(key, [
-      ...(groups.get(key) ?? []),
-      example,
-    ]);
+    const key = learnerTaskKey(example);
+    const group = groups.get(key) ?? [];
+    group.push(example);
+    groups.set(key, group);
+    const cell = cellKey(example);
+    remaining.set(cell, (remaining.get(cell) ?? 0) + 1);
   }
 
+  const targets = new Map<string, number>();
+  for (const [cell, count] of remaining) {
+    targets.set(cell, validationRatio === 0 || count < 2
+      ? 0
+      : Math.min(count - 1, Math.max(1, Math.round(count * validationRatio))));
+  }
+  const heldOut = new Map<string, number>();
   const train: TrainingExample[] = [];
   const validation: TrainingExample[] = [];
+  const ordered = [...groups.values()]
+    .map((group) => {
+      const rows = [...group].sort((a, b) => stableOrder(a).localeCompare(stableOrder(b)));
+      return { rows, key: stableOrder(rows[0]) };
+    })
+    .sort((a, b) => a.key.localeCompare(b.key));
 
-  for (const group of groups.values()) {
-    const ordered = [...group].sort((left, right) =>
-      stableOrder(left).localeCompare(
-        stableOrder(right),
-      ),
+  for (const { rows } of ordered) {
+    const counts = new Map<string, number>();
+    for (const example of rows) {
+      const cell = cellKey(example);
+      counts.set(cell, (counts.get(cell) ?? 0) + 1);
+    }
+    // Prefer avoiding leakage and retaining a training example in every cell
+    // over forcing a validation quota when groups cannot be split safely.
+    const fits = [...counts].every(([cell, count]) =>
+      (heldOut.get(cell) ?? 0) + count <= (targets.get(cell) ?? 0) &&
+      (remaining.get(cell) ?? 0) > count,
     );
-
-    const desired =
-      validationRatio === 0 || ordered.length < 2
-        ? 0
-        : Math.max(
-            1,
-            Math.round(
-              ordered.length * validationRatio,
-            ),
-          );
-    const validationCount = Math.min(
-      desired,
-      Math.max(0, ordered.length - 1),
-    );
-
-    validation.push(
-      ...ordered.slice(0, validationCount),
-    );
-    train.push(
-      ...ordered.slice(validationCount),
-    );
+    if (fits) {
+      validation.push(...rows);
+      for (const [cell, count] of counts) {
+        heldOut.set(cell, (heldOut.get(cell) ?? 0) + count);
+        remaining.set(cell, (remaining.get(cell) ?? 0) - count);
+      }
+    } else {
+      train.push(...rows);
+    }
   }
 
   const byStableId = (

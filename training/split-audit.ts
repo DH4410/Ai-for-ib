@@ -40,37 +40,41 @@ export type CoverageShortfall = {
   missing: number;
 };
 
-export type TrainingSplitAudit = {
+export type PromptOverlapAudit = {
   trainCount: number;
   evalCount: number;
   exactIdOverlaps: string[];
   exactPromptOverlaps: SplitLeakage[];
   nearPromptOverlaps: SplitLeakage[];
+};
+
+export type TrainingSplitAudit = PromptOverlapAudit & {
   trainCoverageGaps: string[];
   evalCoverageGaps: string[];
   trainCoverageShortfalls: CoverageShortfall[];
   evalCoverageShortfalls: CoverageShortfall[];
 };
 
-function normalizedUserPrompt(
-  example: PromptCase,
-): string {
+// Ignore system instructions so changing teaching style cannot hide a reused
+// learner task. Keep ordered user/assistant turns and scientific notation.
+function taskMessages(example: Pick<PromptCase, "prompt">) {
   return example.prompt
-    .filter(({ role }) => role === "user")
-    .map(({ content }) => content)
-    .join("\n")
-    .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .replace(/\s+/g, " ");
+    .filter(({ role }) => role !== "system")
+    .map(({ role, content }) => [
+      role,
+      content.normalize("NFC").replace(/\r\n?/g, "\n").trim(),
+    ]);
 }
 
-function tokenSet(value: string): Set<string> {
+export function learnerTaskKey(example: Pick<PromptCase, "prompt">): string {
+  return JSON.stringify(taskMessages(example));
+}
+
+function tokenSet(example: Pick<PromptCase, "prompt">): Set<string> {
+  // Include variables, signs, numbers, and operators in the advisory score.
+  const value = taskMessages(example).map(([, text]) => text).join("\n");
   return new Set(
-    value
-      .split(" ")
-      .map((token) => token.trim())
-      .filter((token) => token.length > 1),
+    value.match(/[\p{L}\p{M}\p{N}]+|[+\-−×÷=<>^*/±≤≥]/gu) ?? [],
   );
 }
 
@@ -156,11 +160,14 @@ function coverageShortfalls(
   );
 }
 
-export function auditTrainingSplit(
-  train: TrainingExample[],
-  evaluation: EvaluationCase[],
+export function auditPromptOverlap(
+  train: PromptCase[],
+  evaluation: PromptCase[],
   nearThreshold = 0.9,
-): TrainingSplitAudit {
+): PromptOverlapAudit {
+  if (!Number.isFinite(nearThreshold) || nearThreshold <= 0 || nearThreshold > 1) {
+    throw new Error("near prompt threshold must be in (0, 1]");
+  }
   const trainIds = new Set(train.map(({ id }) => id));
   const exactIdOverlaps = evaluation
     .map(({ id }) => id)
@@ -168,18 +175,20 @@ export function auditTrainingSplit(
 
   const trainPrompts = train.map((example) => ({
     id: example.id,
-    normalized: normalizedUserPrompt(example),
+    normalized: learnerTaskKey(example),
+    tokens: tokenSet(example),
   }));
   const evalPrompts = evaluation.map((example) => ({
     id: example.id,
-    normalized: normalizedUserPrompt(example),
+    normalized: learnerTaskKey(example),
+    tokens: tokenSet(example),
   }));
 
   const exactPromptOverlaps: SplitLeakage[] = [];
   const nearPromptOverlaps: SplitLeakage[] = [];
 
   for (const evalPrompt of evalPrompts) {
-    const evalTokens = tokenSet(evalPrompt.normalized);
+    const evalTokens = evalPrompt.tokens;
 
     for (const trainPrompt of trainPrompts) {
       if (
@@ -194,9 +203,7 @@ export function auditTrainingSplit(
         continue;
       }
 
-      const trainTokens = tokenSet(
-        trainPrompt.normalized,
-      );
+      const trainTokens = trainPrompt.tokens;
       if (
         evalTokens.size < 5 ||
         trainTokens.size < 5
@@ -222,29 +229,47 @@ export function auditTrainingSplit(
 
   return {
     evalCount: evaluation.length,
-    evalCoverageGaps: coverageGaps(evaluation),
-    evalCoverageShortfalls: coverageShortfalls(
-      evaluation,
-      EVAL_TARGET_PER_CORE_CELL,
-    ),
     exactIdOverlaps,
     exactPromptOverlaps,
     nearPromptOverlaps,
     trainCount: train.length,
-    trainCoverageGaps: coverageGaps(train),
-    trainCoverageShortfalls: coverageShortfalls(
-      train,
-      TRAIN_TARGET_PER_CORE_CELL,
-    ),
   };
 }
 
-export function hasTrainingSplitLeakage(
-  audit: TrainingSplitAudit,
-): boolean {
+export function auditTrainingSplit(
+  train: TrainingExample[],
+  evaluation: EvaluationCase[],
+  nearThreshold = 0.9,
+): TrainingSplitAudit {
+  return {
+    ...auditPromptOverlap(train, evaluation, nearThreshold),
+    evalCoverageGaps: coverageGaps(evaluation),
+    evalCoverageShortfalls: coverageShortfalls(evaluation, EVAL_TARGET_PER_CORE_CELL),
+    trainCoverageGaps: coverageGaps(train),
+    trainCoverageShortfalls: coverageShortfalls(train, TRAIN_TARGET_PER_CORE_CELL),
+  };
+}
+
+export function hasTrainingSplitLeakage(audit: PromptOverlapAudit): boolean {
   return (
     audit.exactIdOverlaps.length > 0 ||
     audit.exactPromptOverlaps.length > 0 ||
     audit.nearPromptOverlaps.length > 0
   );
+}
+
+export type ValidationSplitAudit = {
+  trainValidation: PromptOverlapAudit;
+  validationBenchmark?: PromptOverlapAudit;
+};
+
+export function auditValidationSplit(
+  train: TrainingExample[],
+  validation: TrainingExample[],
+  benchmark?: EvaluationCase[],
+): ValidationSplitAudit {
+  return {
+    trainValidation: auditPromptOverlap(train, validation),
+    validationBenchmark: benchmark ? auditPromptOverlap(validation, benchmark) : undefined,
+  };
 }

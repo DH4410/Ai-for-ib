@@ -322,4 +322,28 @@ describe("project readiness", () => {
       "training-coverage-below-initial-target",
     );
   });
+  it("blocks fine-tuning if validation leaks into either other partition", () => {
+    const validation = [
+      { ...train, id: "validation-train-copy" },
+      { ...train, id: "validation-benchmark-copy", prompt: benchmark.prompt },
+    ];
+    const report = buildProjectReadiness({
+      sources: [source], manifestEvents: [], train: [train], validation, benchmark: [benchmark],
+    });
+    expect(report.training.blockers).toContain("train-validation-leakage-detected");
+    expect(report.training.blockers).toContain("validation-benchmark-leakage-detected");
+    expect(report.training.privateFineTuneInputsReady).toBe(false);
+    expect(report.training.validationSplitAudit?.trainValidation.exactPromptOverlaps).toHaveLength(1);
+  });
+
+  it("does not mark present but empty datasets ready", () => {
+    const report = buildProjectReadiness({
+      sources: [], manifestEvents: [], train: [], benchmark: [], validation: [],
+    });
+    expect(report.training.blockers).toEqual(expect.arrayContaining([
+      "private-train-jsonl-empty", "private-benchmark-jsonl-empty", "private-validation-jsonl-empty",
+    ]));
+    expect(report.training.privateFineTuneInputsReady).toBe(false);
+  });
+
 });
