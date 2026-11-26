@@ -148,3 +148,76 @@ The tutor remains text-only for these records:
 - exact-question Mark mode continues to exclude them until a verified vision-input path is added.
 
 This lets the learner practise authentic graph/diagram questions without creating false model confidence.
+
+
+## Bulk import from an authorized Drive download
+
+Download and extract your authorized past-paper folders locally (outside Git),
+preserving nested directories. Keep downloaded ZIPs outside the repo as well.
+From the repository root on Node 22, run:
+
+~~~powershell
+npm run paper:batch -- scan "C:\Users\you\Downloads\Past papers"
+~~~
+
+The recursive scanner inventories all PDF filenames, byte counts, SHA-256
+checksums and **unverified filename hints** in ignored
+`private-index/paper-batch.json`. It skips symbolic links, identifies
+byte-identical copies and never uploads files or prints filenames/paths.
+The private inventory also includes a separate `candidates` queue. It groups
+complete, nonconflicting filename hints, distinguishes explicit Mathematics AA
+from AI, and identifies possible pairs, missing scheme hints, and ambiguous
+multiple documents. Explicit language hints must agree; missing language
+is not evidence of English. Duplicate bytes with conflicting complete filename
+identities are not suggested. These groups are only review aids and do not
+establish the syllabus version, copyright permission, or correctness of a
+pair. All reviewed rows still start empty.
+It refuses to overwrite an existing review. Move the old review outside Git
+before rescanning; re-review any changed files.
+
+Open the local review JSON, leave its `version` and `files` intact, and fill
+its `papers` array with one reviewed entry per paper. For example (synthetic
+filenames; replace them with the exact relative paths from the scan):
+
+~~~json
+{
+  "question": "Physics/physics_m25_hl_tz2_p2_qp.pdf",
+  "markscheme": "Physics/physics_m25_hl_tz2_p2_ms.pdf",
+  "reviewed": true,
+  "subject": "physics",
+  "year": 2025,
+  "session": "may",
+  "timezone": "TZ2",
+  "level": "HL",
+  "paper": "p2",
+  "language": "English",
+  "syllabusVersion": "2025"
+}
+~~~
+
+Verify the subject (Mathematics must be AA, not AI), syllabus, paper component,
+session, timezone, level, language and document kind against the original cover
+pages. Filename hints are not evidence of a match. Omit `markscheme` if there
+is no verified matching markscheme; leave uncertain or unrelated files
+unassigned. Do not assign data booklets, combined compilations or duplicate
+copies as if they were individual papers.
+
+~~~powershell
+npm run paper:batch -- check "C:\Users\you\Downloads\Past papers"
+~~~
+
+Check performs a fresh scan, verifies the selected file hashes and rejects
+unreviewed or duplicate identities before any database writes. The output
+shows how many PDFs remain unassigned. After reviewing the summary and
+configuring the dedicated private Supabase environment in your shell:
+
+~~~powershell
+npm run paper:batch -- apply "C:\Users\you\Downloads\Past papers"
+~~~
+
+Apply repeats validation, invokes the existing single-paper indexer in order,
+and stops on the first failed paper. Earlier successful writes remain; the
+operation is not a single database transaction. Count-only per-paper reports
+remain under the existing ignored ingestion-report directory. Do not publish
+the review, extracted text, downloaded files or credentials. This command
+does not download from Drive or grant rights to use any material.
