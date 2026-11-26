@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 
 import { CapabilityStatus } from "@/components/CapabilityStatus";
 import {
@@ -10,7 +11,8 @@ import {
 import { PrivateSourcePdf } from "@/components/PrivateSourcePdf";
 import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
-import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
+import { createLatestRequestScope, workspaceAccountKey } from "@/lib/auth/browser-request-scope";
+import { useBrowserSession } from "@/lib/auth/use-browser-session";
 import {
   canRecordMarkResult,
   canRecordMarkedProgress,
@@ -113,6 +115,25 @@ function progressSource(
 }
 
 export function TutorShell() {
+  const { client, ready, session, revision } = useBrowserSession();
+  if (!ready) {
+    return <main aria-busy="true">Restoring private session…</main>;
+  }
+  return (
+    <TutorWorkspace
+      key={workspaceAccountKey(Boolean(client), session?.user.id, revision)}
+      client={client}
+      session={session}
+    />
+  );
+}
+
+function TutorWorkspace({ client, session }: {
+  client: SupabaseClient | null;
+  session: Session | null;
+}) {
+  const [chatRequests] = useState(createLatestRequestScope);
+  useEffect(() => () => chatRequests.cancel(), [chatRequests]);
   const [subject, setSubject] = useState<Subject>("physics");
   const [mode, setMode] = useState<StudyMode>("learn");
   const [input, setInput] = useState("");
@@ -185,11 +206,11 @@ export function TutorShell() {
     event.preventDefault();
 
     const message = input.trim();
-    if (!message || loading) {
+    if (!message || loading || chatRequests.pending()) {
       return;
     }
 
-    const history: ChatTurn[] = subjectTurns.map(
+    const history: ChatTurn[] = subjectTurns.slice(-12).map(
       ({ role, content }) => ({
         role,
         content,
@@ -235,6 +256,7 @@ export function TutorShell() {
         : {}),
     };
 
+    const request = chatRequests.begin();
     setTurns((current) => [
       ...current,
       {
@@ -248,12 +270,10 @@ export function TutorShell() {
     setLoading(true);
 
     try {
-      const supabase = getBrowserSupabaseClient();
-      const session = supabase
-        ? (await supabase.auth.getSession()).data.session
-        : null;
       const response = await fetch("/api/chat", {
         method: "POST",
+        signal: request.signal,
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
           ...(session?.access_token
@@ -274,6 +294,7 @@ export function TutorShell() {
       const payload = (await response.json()) as
         | TutorResponse
         | { error: string };
+      if (!chatRequests.isCurrent(request)) return;
 
       if (!response.ok || "error" in payload) {
         throw new Error(
@@ -296,6 +317,7 @@ export function TutorShell() {
         },
       ]);
     } catch (error) {
+      if (!chatRequests.isCurrent(request)) return;
       setTurns((current) => [
         ...current,
         {
@@ -311,7 +333,7 @@ export function TutorShell() {
         },
       ]);
     } finally {
-      setLoading(false);
+      if (chatRequests.finish(request)) setLoading(false);
     }
   }
 
@@ -354,10 +376,13 @@ export function TutorShell() {
         </section>
 
         <ProgressPanel
+          key={subject}
+          client={client}
+          session={session}
           onReviseTopic={prepareRevision}
           subject={subject}
         />
-        <SourceLibraryPanel subject={subject} />
+        <SourceLibraryPanel key={subject} session={session} subject={subject} />
         <CapabilityStatus />
 
         <div className="modelStatus">
@@ -757,6 +782,8 @@ export function TutorShell() {
                             "question-paper" &&
                           source.pageStart ? (
                             <PrivateSourcePdf
+                              configured={Boolean(client)}
+                              session={session}
                               source={source}
                             />
                           ) : null}
@@ -794,6 +821,8 @@ export function TutorShell() {
                   !turn.markingUnavailable &&
                   canRecordMarkedProgress(progressSource(turn)) ? (
                     <RecordResult
+                      configured={Boolean(client)}
+                      session={session}
                       source={progressSource(turn)}
                       subject={turn.subject}
                       suggestedMaximumMarks={

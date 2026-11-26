@@ -1,17 +1,12 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 
-import {
-  getBrowserSupabaseClient,
-  isBrowserSupabaseConfigured,
-} from "@/lib/database/supabase-browser";
+import { createLatestRequestScope } from "@/lib/auth/browser-request-scope";
 import type { SafeStudySourceSummary } from "@/lib/sources/repository";
 import type { Subject } from "@/types/study";
 
@@ -25,7 +20,7 @@ function sourceCountLabel(source: SafeStudySourceSummary): string {
         : "";
     const visual =
       source.visualDependentQuestionCount > 0
-        ? ` · ${source.visualDependentQuestionCount} visual withheld`
+        ? ` · ${source.visualDependentQuestionCount} requiring visual context`
         : "";
     return questions + paired + visual;
   }
@@ -63,85 +58,52 @@ function documentTypeLabel(source: SafeStudySourceSummary): string {
 
 export function SourceLibraryPanel({
   subject,
+  session,
 }: {
   subject: Subject;
+  session: Session | null;
 }) {
-  const configured = isBrowserSupabaseConfigured();
-  const client = useMemo(
-    () => getBrowserSupabaseClient(),
-    [],
-  );
-  const [session, setSession] = useState<Session | null>(null);
+  const [requests] = useState(createLatestRequestScope);
   const [sources, setSources] = useState<SafeStudySourceSummary[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadSources = useCallback(
-    async (accessToken: string) => {
-      setLoading(true);
+  useEffect(() => {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setSources([]);
+      setLoading(false);
+      return;
+    }
+
+    const request = requests.begin();
+    setLoading(true);
+    async function loadSources() {
       try {
         const response = await fetch(
-          `/api/sources?subject=${encodeURIComponent(subject)}`,
+          "/api/sources?subject=" + encodeURIComponent(subject),
           {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
+            headers: { Authorization: "Bearer " + accessToken },
             cache: "no-store",
+            signal: request.signal,
           },
         );
-
-        if (!response.ok) {
-          throw new Error("Could not load sources.");
-        }
-
+        if (!response.ok) throw new Error("Could not load sources.");
         const payload = (await response.json()) as {
           sources?: SafeStudySourceSummary[];
         };
-        setSources(payload.sources ?? []);
+        if (requests.isCurrent(request)) setSources(payload.sources ?? []);
       } catch {
-        setSources([]);
+        if (requests.isCurrent(request)) setSources([]);
       } finally {
-        setLoading(false);
+        if (requests.finish(request)) setLoading(false);
       }
-    },
-    [subject],
-  );
-
-  useEffect(() => {
-    if (!client) {
-      return;
     }
 
-    let active = true;
-    void client.auth.getSession().then(({ data }) => {
-      if (active) {
-        setSession(data.session);
-      }
-    });
+    void loadSources();
+    return () => requests.cancel();
+  }, [requests, subject, session?.access_token]);
 
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, [client]);
-
-  useEffect(() => {
-    if (!session?.access_token) {
-      setSources([]);
-      return;
-    }
-
-    void loadSources(session.access_token);
-  }, [loadSources, session?.access_token]);
-
-  if (!configured || !client || !session) {
-    return null;
-  }
+  if (!session) return null;
 
   return (
     <section className="sourceLibraryPanel">

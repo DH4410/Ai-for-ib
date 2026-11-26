@@ -240,7 +240,7 @@ export function createProgressHandlers(
             subject,
           );
 
-        return NextResponse.json({ progress });
+        return NextResponse.json({ progress }, { headers: { "Cache-Control": "private, no-store" } });
       } catch (error) {
         return errorResponse(error);
       }
@@ -279,7 +279,7 @@ export function createProgressHandlers(
           mastery,
         );
 
-        return NextResponse.json({ mastery });
+        return NextResponse.json({ mastery }, { headers: { "Cache-Control": "private, no-store" } });
       } catch (error) {
         return errorResponse(error);
       }
