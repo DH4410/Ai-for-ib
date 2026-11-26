@@ -164,6 +164,14 @@ The recursive scanner inventories all PDF filenames, byte counts, SHA-256
 checksums and **unverified filename hints** in ignored
 `private-index/paper-batch.json`. It skips symbolic links, identifies
 byte-identical copies and never uploads files or prints filenames/paths.
+The private inventory also includes a separate `candidates` queue. It groups
+complete, nonconflicting filename hints, distinguishes explicit Mathematics AA
+from AI, and identifies possible pairs, missing scheme hints, and ambiguous
+multiple documents. Explicit language hints must agree; missing language
+is not evidence of English. Duplicate bytes with conflicting complete filename
+identities are not suggested. These groups are only review aids and do not
+establish the syllabus version, copyright permission, or correctness of a
+pair. All reviewed rows still start empty.
 It refuses to overwrite an existing review. Move the old review outside Git
 before rescanning; re-review any changed files.
 

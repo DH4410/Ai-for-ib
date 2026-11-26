@@ -6,6 +6,7 @@ import {
   prepareBatch,
   scanPastPaperDirectory,
   summarizeInventory,
+  summarizeReviewCandidates,
   type ImportInventory,
   type ReviewedPaper,
 } from "@/lib/past-papers/batch-import";
@@ -98,4 +99,53 @@ describe("private past-paper batch", () => {
     await symlink(join(root, row.question), join(root, "alias.pdf"));
     expect((await scanPastPaperDirectory(root)).files).toHaveLength(4);
   });
+  it("suggests a filename-only match without marking the pair as reviewed", async () => {
+    const inventory = await scanPastPaperDirectory(root);
+    expect(inventory.candidates).toEqual([
+      expect.objectContaining({
+        questionPaths: [row.question],
+        markschemePaths: [row.markscheme],
+        status: "possible_pair",
+      }),
+    ]);
+    expect(inventory.papers).toEqual([]);
+    expect(summarizeReviewCandidates(inventory)).toEqual({
+      possiblePairCount: 1, ambiguousCandidateCount: 0, noSchemeHintCount: 0, pdfsWithoutCandidateCount: 2,
+    });
+    expect(() => prepareBatch(inventory, inventory, root)).toThrow("add at least one reviewed paper");
+  });
+
+  it("keeps duplicate scheme candidates ambiguous and distinguishes math courses", async () => {
+    await writeFile(join(root, "Physics", "physics_m25_hl_tz2_p2_ms_2.pdf"), "alternative scheme bytes");
+    await writeFile(join(root, "Math", "math_aa_m25_hl_tz2_p2_qp.pdf"), "aa question bytes");
+    await writeFile(join(root, "Math", "math_ai_m25_hl_tz2_p2_ms.pdf"), "ai scheme bytes");
+    const inventory = await scanPastPaperDirectory(root);
+    expect(inventory.candidates.find((c) => c.hints.subject === "physics")?.status).toBe("ambiguous");
+    const math = inventory.candidates.find((c) => c.hints.subject === "mathematics");
+    expect(math?.status).toBe("no_scheme_hint");
+    expect(math?.markschemePaths).toEqual([]);
+  });
+
+  it("does not treat exact copies as distinct competing schemes", async () => {
+    await writeFile(join(root, "Physics", "physics_m25_hl_tz2_p2_ms_copy.pdf"), "synthetic scheme bytes");
+    const inventory = await scanPastPaperDirectory(root);
+    expect(inventory.candidates[0].markschemePaths).toHaveLength(1);
+    expect(inventory.candidates[0].status).toBe("possible_pair");
+  });
+
+  it("withholds a copied PDF when its filenames imply conflicting identities", async () => {
+    await writeFile(join(root, "Physics", "physics_m24_hl_tz2_p2_ms.pdf"), "synthetic scheme bytes");
+    const inventory = await scanPastPaperDirectory(root);
+    expect(inventory.candidates[0].status).toBe("no_scheme_hint");
+  });
+
+  it("does not pair files with different explicit languages or unknown math courses", async () => {
+    await writeFile(join(root, "Physics", "physics_m26_hl_tz2_p2_qp_English.pdf"), "English paper bytes");
+    await writeFile(join(root, "Physics", "physics_m26_hl_tz2_p2_ms_French.pdf"), "French scheme bytes");
+    await writeFile(join(root, "Math", "math_m25_hl_tz2_p2_qp.pdf"), "unknown math course");
+    const inventory = await scanPastPaperDirectory(root);
+    expect(inventory.candidates.find((c) => c.hints.year === 2026)?.status).toBe("no_scheme_hint");
+    expect(inventory.candidates.some((c) => c.hints.subject === "mathematics")).toBe(false);
+  });
+
 });

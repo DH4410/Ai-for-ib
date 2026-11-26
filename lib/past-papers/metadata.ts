@@ -36,63 +36,75 @@ function normalizedFilename(filename: string): string {
     .trim();
 }
 
-function parseSubject(filename: string): Subject | undefined {
-  if (/\bchem(?:istry)?\b/.test(filename)) {
-    return "chemistry";
-  }
-  if (/\bphysics\b/.test(filename)) {
-    return "physics";
-  }
-  if (/\bmath(?:ematics)?\b/.test(filename)) {
-    return "mathematics";
-  }
+function only<T>(values: T[]): T | undefined {
+  const distinct = [...new Set(values)];
+  return distinct.length === 1 ? distinct[0] : undefined;
+}
 
-  return undefined;
+function parseSubject(filename: string): Subject | undefined {
+  const subjects: Subject[] = [];
+  if (/\bchem(?:istry)?\b/.test(filename)) subjects.push("chemistry");
+  if (/\bphysics\b/.test(filename)) subjects.push("physics");
+  if (/\bmath(?:ematics)?\b/.test(filename)) subjects.push("mathematics");
+  return only(subjects);
 }
 
 function parseSessionAndYear(filename: string): Pick<ParsedPaperMetadata, "session" | "year"> {
-  const compactSession = filename.match(/\b([mn])(20\d{2}|\d{2})\b/);
-  if (compactSession) {
-    const year = compactSession[2].length === 2 ? 2000 + Number(compactSession[2]) : Number(compactSession[2]);
-    return { session: compactSession[1] === "m" ? "may" : "november", year };
+  const sessions: PaperSession[] = [];
+  const years = [...filename.matchAll(/\b(20\d{2})\b/g)].map((match) => Number(match[1]));
+  for (const match of filename.matchAll(/\b([mn])(20\d{2}|\d{2})\b/g)) {
+    sessions.push(match[1] === "m" ? "may" : "november");
+    years.push(match[2].length === 2 ? 2000 + Number(match[2]) : Number(match[2]));
   }
-
-  const fullYear = filename.match(/\b(20\d{2})\b/);
-  const session = /\bnov(?:ember)?\b/.test(filename)
-    ? "november"
-    : /\bmay\b/.test(filename)
-      ? "may"
-      : undefined;
-
-  return { session, year: fullYear ? Number(fullYear[1]) : undefined };
+  if (/\bnov(?:ember)?\b/.test(filename)) sessions.push("november");
+  if (/\bmay\b/.test(filename)) sessions.push("may");
+  return { session: only(sessions), year: only(years) };
 }
 
 function parsePaper(filename: string): string | undefined {
-  const match = filename.match(/\b(?:paper\s*|p)?(1a|1b|[123])\b/);
-
-  return match ? `p${match[1]}` : undefined;
+  // A standalone number can be a date, copy number, or part of a filename.
+  const matches = [...filename.matchAll(/\b(?:paper\s*|p)(1a|1b|[123])\b/g)];
+  return only(matches.map((match) => "p" + match[1]));
 }
 
 export function parsePaperMetadata(filename: string): ParsedPaperMetadata {
   const normalized = normalizedFilename(filename);
   const { session, year } = parseSessionAndYear(normalized);
-  const documentKind = /\bmark\s*scheme\b|\bmarkscheme\b|\bms\b/.test(normalized)
-    ? "markscheme"
-    : /\bquestion\s*paper\b|\bqpaper\b|\bqp\b/.test(normalized)
-      ? "question-paper"
-      : /\bdata\s*booklet\b/.test(normalized)
-        ? "data-booklet"
-        : undefined;
-  const level = /\bhl\b/.test(normalized) ? "HL" : /\bsl\b/.test(normalized) ? "SL" : undefined;
-  const timezone = normalized.match(/\btz([123abc])\b/)?.[0]?.toUpperCase();
-
+  const kinds: PaperDocumentKind[] = [];
+  if (/\bmark\s*scheme\b|\bmarkscheme\b|\bms\b/.test(normalized)) kinds.push("markscheme");
+  if (/\bquestion\s*paper\b|\bqpaper\b|\bqp\b/.test(normalized)) kinds.push("question-paper");
+  if (/\bdata\s*booklet\b/.test(normalized)) kinds.push("data-booklet");
+  const levels: PaperLevel[] = [];
+  if (/\bhl\b/.test(normalized)) levels.push("HL");
+  if (/\bsl\b/.test(normalized)) levels.push("SL");
   return {
-    documentKind,
-    level,
+    documentKind: only(kinds),
+    level: only(levels),
     paper: parsePaper(normalized),
     session,
     subject: parseSubject(normalized),
-    timezone,
+    timezone: only([...normalized.matchAll(/\btz\s*([0123abc])\b/g)].map((m) => "TZ" + m[1].toUpperCase())),
     year,
+  };
+}
+
+export type PaperReviewHints = ParsedPaperMetadata & {
+  mathematicsCourse?: "AA" | "AI";
+  language?: "English" | "French" | "Spanish";
+};
+
+export function parsePaperReviewHints(filename: string): PaperReviewHints {
+  const normalized = normalizedFilename(filename);
+  const courses: Array<"AA" | "AI"> = [];
+  if (/\baa\b|\banalysis\s+and\s+approaches\b/.test(normalized)) courses.push("AA");
+  if (/\bai\b|\bapplications\s+and\s+interpretation\b/.test(normalized)) courses.push("AI");
+  const languages: Array<"English" | "French" | "Spanish"> = [];
+  if (/\benglish\b/.test(normalized)) languages.push("English");
+  if (/\bfrench\b/.test(normalized)) languages.push("French");
+  if (/\bspanish\b/.test(normalized)) languages.push("Spanish");
+  return {
+    ...parsePaperMetadata(filename),
+    mathematicsCourse: only(courses),
+    language: only(languages),
   };
 }

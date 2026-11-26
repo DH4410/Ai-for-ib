@@ -8,13 +8,14 @@ import {
   prepareBatch,
   scanPastPaperDirectory,
   summarizeInventory,
+  summarizeReviewCandidates,
 } from "../lib/past-papers/batch-import";
 
 const usage = [
   "npm run paper:batch -- scan <local-folder>",
   "npm run paper:batch -- check <local-folder>",
   "npm run paper:batch -- apply <local-folder>",
-  "Scan writes private-index/paper-batch.json; review and fill its papers array.",
+  "Scan writes private-index/paper-batch.json with filename-only candidates; review and fill its papers array.",
   "Check is a dry run. Apply writes to the configured private database.",
 ].join("\n");
 
@@ -33,7 +34,7 @@ async function main(): Promise<void> {
     await mkdir(resolve("private-index"), { recursive: true });
     // Never overwrite a completed review automatically.
     await writeFile(reviewPath, JSON.stringify(inventory, null, 2) + "\n", { flag: "wx" });
-    console.log(JSON.stringify({ status: "scanned", ...summarizeInventory(inventory) }, null, 2));
+    console.log(JSON.stringify({ status: "scanned", ...summarizeInventory(inventory), ...summarizeReviewCandidates(inventory) }, null, 2));
     return;
   }
 
