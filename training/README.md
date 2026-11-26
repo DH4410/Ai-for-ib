@@ -160,7 +160,9 @@ npm run training:audit-quality -- training/private-data/train.jsonl
 
 The audit never prints prompt/completion text. It reports example IDs, similarity scores and aggregate diversity only.
 
-It treats **the same normalized learner prompt with conflicting assistant completions** as a blocker because that teaches contradictory behavior. Exact duplicate examples, near-duplicate prompts and repeated completions are warnings to review rather than automatic failures.
+It treats **the same complete ordered conversation with different assistant completions** as a blocker for human review. Different valid responses can also trigger this conservative check; the audit does not judge scientific correctness. Exact matching preserves case, mathematical operators and chemical notation, and normalizes only canonical Unicode, line endings and outer whitespace. System instructions and prior assistant turns are included because they change what the model sees. Subject and mode labels alone do not distinguish prompts because the trainer removes that metadata.
+
+Exact duplicate examples, near-duplicate final learner messages within the same preceding conversation, and repeated completions are warnings to review rather than automatic failures.
 
 Use this alongside `training:audit-split`: the split audit prevents train/benchmark leakage, while the quality audit checks repetition and contradictions inside the training set itself.
 

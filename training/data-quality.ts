@@ -18,51 +18,34 @@ export type TrainingDataQualityAudit = {
   repeatedCompletionPairs: TrainingSimilarityPair[];
 };
 
-function normalize(
-  value: string,
-): string {
-  return value
-    .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .replace(/\s+/g, " ");
+// Preserve case, operators, decimal notation and internal whitespace: they
+// can change the meaning of a mathematics, physics or chemistry example.
+function exactText(value: string): string {
+  return value.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 }
 
-function promptText(
-  example: TrainingExample,
-): string {
-  return normalize(
-    example.prompt
-      .filter(({ role }) => role === "user")
-      .map(({ content }) => content)
-      .join("\n"),
+function messageKey(messages: TrainingExample["prompt"]): string {
+  return JSON.stringify(
+    messages.map(({ role, content }) => [role, exactText(content)]),
   );
 }
 
-function completionText(
-  example: TrainingExample,
-): string {
-  return normalize(
-    example.completion[0].content,
-  );
-}
-
-function tokenSet(
-  value: string,
-): Set<string> {
+// Fuzzy matching is advisory only. It must never define an exact conflict.
+function tokenSet(value: string): Set<string> {
   return new Set(
-    value
-      .split(" ")
+    exactText(value)
+      .toLowerCase()
+      .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ")
+      .trim()
+      .split(/\s+/)
       .filter((token) => token.length > 1),
   );
 }
 
 function jaccard(
-  left: string,
-  right: string,
+  leftTokens: Set<string>,
+  rightTokens: Set<string>,
 ): number {
-  const leftTokens = tokenSet(left);
-  const rightTokens = tokenSet(right);
 
   if (
     leftTokens.size === 0 &&
@@ -109,6 +92,7 @@ export function auditTrainingDataQuality(
   nearPromptThreshold = 0.9,
 ): TrainingDataQualityAudit {
   if (
+    !Number.isFinite(nearPromptThreshold) ||
     nearPromptThreshold <= 0 ||
     nearPromptThreshold > 1
   ) {
@@ -119,10 +103,13 @@ export function auditTrainingDataQuality(
 
   const normalized = examples.map(
     (example) => ({
-      completion:
-        completionText(example),
+      completion: exactText(example.completion[0].content),
       id: example.id,
-      prompt: promptText(example),
+      prompt: messageKey(example.prompt),
+      // The trainer receives the ordered prompt messages, not mode/subject
+      // metadata. Compare near-duplicates only within the same prior context.
+      context: messageKey(example.prompt.slice(0, -1)),
+      tokens: tokenSet(example.prompt[example.prompt.length - 1].content),
     }),
   );
   const duplicateExamplePairs:
@@ -168,22 +155,13 @@ export function auditTrainingDataQuality(
             pair,
           );
         }
-      } else {
-        const similarity = jaccard(
-          left.prompt,
-          right.prompt,
-        );
-        const leftTokenCount =
-          tokenSet(left.prompt).size;
-        const rightTokenCount =
-          tokenSet(right.prompt).size;
-
-        if (
-          leftTokenCount >= 5 &&
-          rightTokenCount >= 5 &&
-          similarity >=
-            nearPromptThreshold
-        ) {
+      } else if (
+        left.context === right.context &&
+        left.tokens.size >= 5 &&
+        right.tokens.size >= 5
+      ) {
+        const similarity = jaccard(left.tokens, right.tokens);
+        if (similarity >= nearPromptThreshold) {
           nearPromptPairs.push({
             leftId: left.id,
             rightId: right.id,
