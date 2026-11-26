@@ -77,4 +77,13 @@ describe("Colab training workflow", () => {
       /hf_[A-Za-z0-9]{20,}/,
     );
   });
+  it("includes validation in the blocking split audit and runs the quality audit", async () => {
+    const raw = await readFile("training/AI_for_IB_Colab.ipynb", "utf8");
+    const notebook = JSON.parse(raw) as { cells: Array<{ source: string[] }> };
+    const auditCell = notebook.cells.map((c) => c.source.join("")).find((c) => c.includes("training:audit-split"));
+    expect(auditCell).toContain("audit_cmd += ['--validation', VALIDATION_JSONL]");
+    expect(auditCell).toContain("subprocess.run(audit_cmd, check=True)");
+    expect(auditCell).toContain("training:audit-quality");
+  });
+
 });

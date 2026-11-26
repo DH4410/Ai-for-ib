@@ -7,6 +7,7 @@ import {
 import {
   splitSftExamples,
 } from "@/training/sft-split";
+import { learnerTaskKey } from "@/training/split-audit";
 import {
   parseTrainingExample,
   type TrainingExample,
@@ -120,4 +121,26 @@ describe("SFT train/validation split", () => {
       "validationRatio must be at least 0 and below 0.5",
     );
   });
+  it("keeps identical tasks together even across modes and system instructions", () => {
+    const a = fixture("physics-learn-001", "physics", "learn");
+    const b = fixture("chemistry-mark-001", "chemistry", "mark");
+    b.prompt = [{ role: "system", content: "Use hints." }, ...a.prompt];
+    const rows = [a, b, ...Array.from({ length: 8 }, (_, i) =>
+      fixture("physics-learn-extra-" + i, "physics", "learn"))];
+    const split = splitSftExamples(rows, 0.2);
+    const trainTasks = new Set(split.train.map(learnerTaskKey));
+    expect(split.validation.some((v) => trainTasks.has(learnerTaskKey(v)))).toBe(false);
+    expect(split.train.some((v) => v.id === b.id)).toBe(true);
+    expect(split.train.some((v) => v.id === a.id)).toBe(true);
+    expect(splitSftExamples([...rows].reverse(), 0.2)).toEqual(split);
+  });
+
+  it("does not divide a cell consisting entirely of identical tasks", () => {
+    const a = fixture("physics-learn-001", "physics", "learn");
+    const b = { ...a, id: "physics-learn-002" };
+    const split = splitSftExamples([a, b], 0.2);
+    expect(split.train).toHaveLength(2);
+    expect(split.validation).toEqual([]);
+  });
+
 });
