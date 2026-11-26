@@ -68,7 +68,7 @@ function parseSessionAndYear(filename: string): Pick<ParsedPaperMetadata, "sessi
 }
 
 function parsePaper(filename: string): string | undefined {
-  const match = filename.match(/\b(?:paper\s*)?(1a|1b|[123])\b/);
+  const match = filename.match(/\b(?:paper\s*|p)?(1a|1b|[123])\b/);
 
   return match ? `p${match[1]}` : undefined;
 }
