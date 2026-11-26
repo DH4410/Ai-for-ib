@@ -855,11 +855,7 @@ $$;
 
 revoke all on function public.get_private_past_paper_question(text)
   from public, anon, authenticated;
-revoke all on function public.get_private_past_paper_asset(text)
-  from public, anon, authenticated;
 grant execute on function public.get_private_past_paper_question(text)
-  to service_role;
-grant execute on function public.get_private_past_paper_asset(text)
   to service_role;
 
 

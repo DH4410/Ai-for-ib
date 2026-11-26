@@ -24,3 +24,32 @@ jobs:
       - run: python3 -m py_compile training/colab_train.py training/benchmark_models.py training/colab_preflight.py training/smoke_adapter.py training/compare_adapter.py training/check_training_stack.py
       - run: python3 -m unittest discover -s tests/training -p 'test_*.py'
       - run: npm run build
+
+  database-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: smoke-only-password
+          POSTGRES_DB: ib_smoke
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ib_smoke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap disposable PostgreSQL roles
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: docker exec -i "$PG_CONTAINER" psql -X -U postgres -d ib_smoke -v ON_ERROR_STOP=1 < tests/database/bootstrap-smoke.sql
+      - name: Apply foundation migration on a fresh database
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: docker exec -i "$PG_CONTAINER" psql -X -U postgres -d ib_smoke -v ON_ERROR_STOP=1 --single-transaction < supabase/migrations/20260913000000_private_study_foundation.sql
+      - name: Exercise private RPCs with owned synthetic fixtures
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: docker exec -i "$PG_CONTAINER" psql -X -U postgres -d ib_smoke -v ON_ERROR_STOP=1 < tests/database/past-paper-smoke.sql

@@ -367,4 +367,16 @@ describe("Supabase migration integrity", () => {
       expect(hardening).toContain("to service_role;");
     }
   });
+  it("creates every RPC before any grant or revoke references it", async () => {
+    const sql = await migration();
+    for (const name of RPC_NAMES) {
+      const definition = sql.indexOf("create or replace function public." + name + "(");
+      expect(definition).toBeGreaterThanOrEqual(0);
+      for (const prefix of ["revoke all on function public.", "grant execute on function public."]) {
+        const privilege = sql.indexOf(prefix + name + "(");
+        expect(privilege, name + " " + prefix).toBeGreaterThan(definition);
+      }
+    }
+  });
+
 });
