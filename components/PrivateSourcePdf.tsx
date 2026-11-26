@@ -2,119 +2,87 @@
 
 import {
   useEffect,
-  useMemo,
+  useRef,
   useState,
 } from "react";
 
-import {
-  getBrowserSupabaseClient,
-  isBrowserSupabaseConfigured,
-} from "@/lib/database/supabase-browser";
+import type { Session } from "@supabase/supabase-js";
+import { createLatestRequestScope } from "@/lib/auth/browser-request-scope";
 import type {
   SourceCitation,
 } from "@/types/study";
 
 export function PrivateSourcePdf({
   source,
+  configured,
+  session,
 }: {
   source: SourceCitation;
+  configured: boolean;
+  session: Session | null;
 }) {
-  const [pdfUrl, setPdfUrl] =
-    useState<string | null>(null);
-  const [status, setStatus] =
-    useState("");
-  const [loading, setLoading] =
-    useState(false);
-  const client = useMemo(
-    () => getBrowserSupabaseClient(),
-    [],
-  );
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [requests] = useState(createLatestRequestScope);
+  const urlRef = useRef<string | null>(null);
 
-  useEffect(
-    () => () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
-    },
-    [pdfUrl],
-  );
+  useEffect(() => () => {
+    requests.cancel();
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    urlRef.current = null;
+  }, [requests]);
 
   async function openSource() {
-    if (
-      !isBrowserSupabaseConfigured() ||
-      !client
-    ) {
-      setStatus(
-        "Private source viewing is not configured.",
-      );
+    if (!configured) {
+      setStatus("Private source viewing is not configured.");
       return;
     }
+    if (!session?.access_token) {
+      setStatus("Sign in from the Progress panel to view private source pages.");
+      return;
+    }
+    if (requests.pending()) return;
 
+    const request = requests.begin();
     setLoading(true);
     setStatus("");
 
     try {
-      const {
-        data: { session },
-      } = await client.auth.getSession();
-
-      if (!session?.access_token) {
-        setStatus(
-          "Sign in from the Progress panel to view private source pages.",
-        );
-        return;
-      }
-
       const response = await fetch(
-        `/api/source-pdf?questionId=${encodeURIComponent(
-          source.id,
-        )}`,
+        "/api/source-pdf?questionId=" + encodeURIComponent(source.id),
         {
-          headers: {
-            Authorization:
-              `Bearer ${session.access_token}`,
-          },
+          headers: { Authorization: "Bearer " + session.access_token },
+          cache: "no-store",
+          signal: request.signal,
         },
       );
-
       if (!response.ok) {
-        const payload =
-          (await response
-            .json()
-            .catch(() => ({}))) as {
-            error?: string;
-          };
-        throw new Error(
-          payload.error ??
-            "Could not load the private source PDF.",
-        );
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? "Could not load the private source PDF.");
       }
 
       const blob = await response.blob();
-      const nextUrl =
-        URL.createObjectURL(blob);
-
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
+      if (!requests.isCurrent(request)) return;
+      const nextUrl = URL.createObjectURL(blob);
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+      urlRef.current = nextUrl;
       setPdfUrl(nextUrl);
     } catch (error) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not load the private source PDF.",
-      );
+      if (!requests.isCurrent(request)) return;
+      setStatus(error instanceof Error ? error.message : "Could not load the private source PDF.");
     } finally {
-      setLoading(false);
+      if (requests.finish(request)) setLoading(false);
     }
   }
 
   function closeSource() {
-    if (pdfUrl) {
-      URL.revokeObjectURL(pdfUrl);
-    }
+    requests.cancel();
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    urlRef.current = null;
     setPdfUrl(null);
     setStatus("");
+    setLoading(false);
   }
 
   const page = source.pageStart ?? 1;

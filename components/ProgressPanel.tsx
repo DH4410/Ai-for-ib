@@ -2,17 +2,12 @@
 
 import {
   FormEvent,
-  useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  getBrowserSupabaseClient,
-  isBrowserSupabaseConfigured,
-} from "@/lib/database/supabase-browser";
+import { createLatestRequestScope } from "@/lib/auth/browser-request-scope";
 import type { Subject } from "@/types/study";
 
 type ProgressItem = {
@@ -35,105 +30,62 @@ export type ProgressStudyTarget = {
 export function ProgressPanel({
   subject,
   onReviseTopic,
+  client,
+  session,
 }: {
+  client: SupabaseClient | null;
+  session: Session | null;
   subject: Subject;
   onReviseTopic?: (target: ProgressStudyTarget) => void;
 }) {
-  const configured = isBrowserSupabaseConfigured();
-  const client = useMemo(
-    () => getBrowserSupabaseClient(),
-    [],
-  );
-  const [session, setSession] = useState<Session | null>(null);
+  const configured = Boolean(client);
+  const [requests] = useState(createLatestRequestScope);
   const [progress, setProgress] = useState<ProgressItem[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [email, setEmail] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
-  const loadProgress = useCallback(
-    async (accessToken: string) => {
-      setLoadingProgress(true);
+  useEffect(() => {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setProgress([]);
+      setLoadingProgress(false);
+      return;
+    }
 
+    async function loadProgress() {
+      const request = requests.begin();
+      setLoadingProgress(true);
       try {
         const response = await fetch(
-          `/api/progress?subject=${encodeURIComponent(subject)}`,
+          "/api/progress?subject=" + encodeURIComponent(subject),
           {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
+            headers: { Authorization: "Bearer " + accessToken },
+            signal: request.signal,
+            cache: "no-store",
           },
         );
-
-        if (!response.ok) {
-          throw new Error("Could not load progress.");
-        }
-
-        const payload = (await response.json()) as {
-          progress?: ProgressItem[];
-        };
-        setProgress(payload.progress ?? []);
+        if (!response.ok) throw new Error("Could not load progress.");
+        const payload = (await response.json()) as { progress?: ProgressItem[] };
+        if (requests.isCurrent(request)) setProgress(payload.progress ?? []);
       } catch {
-        setProgress([]);
+        if (requests.isCurrent(request)) setProgress([]);
       } finally {
-        setLoadingProgress(false);
+        if (requests.finish(request)) setLoadingProgress(false);
       }
-    },
-    [subject],
-  );
-
-  useEffect(() => {
-    if (!client) {
-      return;
     }
 
-    let active = true;
-    void client.auth.getSession().then(({ data }) => {
-      if (!active) {
-        return;
-      }
-      setSession(data.session);
-    });
-
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, [client]);
-
-  useEffect(() => {
-    if (!session?.access_token) {
-      setProgress([]);
-      return;
-    }
-
-    void loadProgress(session.access_token);
-  }, [loadProgress, session?.access_token]);
-
-  useEffect(() => {
     function refreshProgress() {
-      if (session?.access_token) {
-        void loadProgress(session.access_token);
-      }
+      void loadProgress();
     }
-
-    window.addEventListener(
-      "ib-progress-updated",
-      refreshProgress,
-    );
+    refreshProgress();
+    window.addEventListener("ib-progress-updated", refreshProgress);
     return () => {
-      window.removeEventListener(
-        "ib-progress-updated",
-        refreshProgress,
-      );
+      requests.cancel();
+      window.removeEventListener("ib-progress-updated", refreshProgress);
     };
-  }, [loadProgress, session?.access_token]);
+  }, [requests, subject, session?.access_token]);
 
   async function requestMagicLink(event: FormEvent) {
     event.preventDefault();

@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 
 import { CapabilityStatus } from "@/components/CapabilityStatus";
 import {
@@ -10,10 +11,13 @@ import {
 import { PrivateSourcePdf } from "@/components/PrivateSourcePdf";
 import { RecordResult } from "@/components/RecordResult";
 import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
-import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
+import { createLatestRequestScope, workspaceAccountKey } from "@/lib/auth/browser-request-scope";
+import { useBrowserSession } from "@/lib/auth/use-browser-session";
 import {
   canRecordMarkResult,
+  canRecordMarkedProgress,
   recordableMarkSuggestion,
+  selectMarkSource,
   stripMarkSuggestion,
 } from "@/lib/marking/score";
 import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
@@ -47,11 +51,13 @@ const paperOptionsBySubject: Record<
   Array<{ value: string; label: string }>
 > = {
   physics: [
+    { value: "p1", label: "Paper 1 (older syllabus)" },
     { value: "p1a", label: "Paper 1A" },
     { value: "p1b", label: "Paper 1B" },
     { value: "p2", label: "Paper 2" },
   ],
   chemistry: [
+    { value: "p1", label: "Paper 1 (older syllabus)" },
     { value: "p1a", label: "Paper 1A" },
     { value: "p1b", label: "Paper 1B" },
     { value: "p2", label: "Paper 2" },
@@ -63,13 +69,15 @@ const paperOptionsBySubject: Record<
   ],
 };
 
+const latestPaperYear = Math.min(new Date().getUTCFullYear(), 2100);
 const paperYears = Array.from(
-  { length: 7 },
-  (_, index) => 2026 - index,
+  { length: Math.max(0, latestPaperYear - 1999) },
+  (_, index) => latestPaperYear - index,
 );
 
 type VisibleTurn = ChatTurn & {
   sources?: TutorResponse["sources"];
+  markingUnavailable?: boolean;
   mode: StudyMode;
   subject: Subject;
 };
@@ -79,7 +87,8 @@ function markSuggestion(
 ) {
   if (
     turn.role !== "assistant" ||
-    turn.mode !== "mark"
+    turn.mode !== "mark" ||
+    turn.markingUnavailable
   ) {
     return null;
   }
@@ -102,12 +111,29 @@ function visibleTurnContent(
 function progressSource(
   turn: VisibleTurn,
 ): SourceCitation | undefined {
-  return turn.sources?.find(
-    (source) => (source.topicIds?.length ?? 0) > 0,
-  );
+  return selectMarkSource(turn.sources);
 }
 
 export function TutorShell() {
+  const { client, ready, session, revision } = useBrowserSession();
+  if (!ready) {
+    return <main aria-busy="true">Restoring private session…</main>;
+  }
+  return (
+    <TutorWorkspace
+      key={workspaceAccountKey(Boolean(client), session?.user.id, revision)}
+      client={client}
+      session={session}
+    />
+  );
+}
+
+function TutorWorkspace({ client, session }: {
+  client: SupabaseClient | null;
+  session: Session | null;
+}) {
+  const [chatRequests] = useState(createLatestRequestScope);
+  useEffect(() => () => chatRequests.cancel(), [chatRequests]);
   const [subject, setSubject] = useState<Subject>("physics");
   const [mode, setMode] = useState<StudyMode>("learn");
   const [input, setInput] = useState("");
@@ -180,11 +206,11 @@ export function TutorShell() {
     event.preventDefault();
 
     const message = input.trim();
-    if (!message || loading) {
+    if (!message || loading || chatRequests.pending()) {
       return;
     }
 
-    const history: ChatTurn[] = subjectTurns.map(
+    const history: ChatTurn[] = subjectTurns.slice(-12).map(
       ({ role, content }) => ({
         role,
         content,
@@ -230,6 +256,7 @@ export function TutorShell() {
         : {}),
     };
 
+    const request = chatRequests.begin();
     setTurns((current) => [
       ...current,
       {
@@ -243,12 +270,10 @@ export function TutorShell() {
     setLoading(true);
 
     try {
-      const supabase = getBrowserSupabaseClient();
-      const session = supabase
-        ? (await supabase.auth.getSession()).data.session
-        : null;
       const response = await fetch("/api/chat", {
         method: "POST",
+        signal: request.signal,
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
           ...(session?.access_token
@@ -269,6 +294,7 @@ export function TutorShell() {
       const payload = (await response.json()) as
         | TutorResponse
         | { error: string };
+      if (!chatRequests.isCurrent(request)) return;
 
       if (!response.ok || "error" in payload) {
         throw new Error(
@@ -285,15 +311,18 @@ export function TutorShell() {
           role: "assistant",
           content: payload.answer,
           sources: payload.sources,
+          markingUnavailable: mode === "mark" && payload.model === "retrieval-only",
           mode,
           subject,
         },
       ]);
     } catch (error) {
+      if (!chatRequests.isCurrent(request)) return;
       setTurns((current) => [
         ...current,
         {
           role: "assistant",
+          markingUnavailable: true,
           content:
             "I could not reach the model backend. " +
             (error instanceof Error
@@ -304,7 +333,7 @@ export function TutorShell() {
         },
       ]);
     } finally {
-      setLoading(false);
+      if (chatRequests.finish(request)) setLoading(false);
     }
   }
 
@@ -347,10 +376,13 @@ export function TutorShell() {
         </section>
 
         <ProgressPanel
+          key={subject}
+          client={client}
+          session={session}
           onReviseTopic={prepareRevision}
           subject={subject}
         />
-        <SourceLibraryPanel subject={subject} />
+        <SourceLibraryPanel key={subject} session={session} subject={subject} />
         <CapabilityStatus />
 
         <div className="modelStatus">
@@ -549,9 +581,9 @@ export function TutorShell() {
                     value={timezoneFilter}
                   >
                     <option value="">Any timezone</option>
-                    <option value="TZ1">TZ1</option>
-                    <option value="TZ2">TZ2</option>
-                    <option value="TZ3">TZ3</option>
+                    {["TZ0", "TZ1", "TZ2", "TZ3", "TZA", "TZB", "TZC"].map((timezone) => (
+                      <option key={timezone} value={timezone}>{timezone}</option>
+                    ))}
                   </select>
                 </label>
 
@@ -634,7 +666,7 @@ export function TutorShell() {
                 </button>
 
                 <span className="verifiedSourceNote">
-                  Exact indexed wording
+                  Exact indexed wording · older papers may use a previous syllabus.
                 </span>
               </div>
             ) : (
@@ -750,6 +782,8 @@ export function TutorShell() {
                             "question-paper" &&
                           source.pageStart ? (
                             <PrivateSourcePdf
+                              configured={Boolean(client)}
+                              session={session}
                               source={source}
                             />
                           ) : null}
@@ -784,10 +818,11 @@ export function TutorShell() {
                   {turn.role === "assistant" &&
                   turn.mode === "mark" &&
                   turn.subject &&
-                  canRecordMarkResult(
-                    progressSource(turn),
-                  ) ? (
+                  !turn.markingUnavailable &&
+                  canRecordMarkedProgress(progressSource(turn)) ? (
                     <RecordResult
+                      configured={Boolean(client)}
+                      session={session}
                       source={progressSource(turn)}
                       subject={turn.subject}
                       suggestedMaximumMarks={
@@ -799,13 +834,11 @@ export function TutorShell() {
                     />
                   ) : turn.role === "assistant" &&
                     turn.mode === "mark" &&
-                    progressSource(turn)?.documentType ===
-                      "question-paper" ? (
+                    progressSource(turn)?.documentType === "question-paper" ? (
                     <p className="unscoredPaperNote">
-                      Qualitative feedback only · this paper
-                      question has no verified paired official
-                      markscheme, so it cannot be saved as an
-                      official scored attempt.
+                      {canRecordMarkResult(progressSource(turn))
+                        ? "This question needs a verified topic mapping before its mark can be saved to mastery."
+                        : "A verified paired markscheme, maximum mark and text-only question are required to save an official scored attempt."}
                     </p>
                   ) : null}
                 </article>

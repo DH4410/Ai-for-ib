@@ -2,14 +2,13 @@
 
 import {
   FormEvent,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
-import {
-  getBrowserSupabaseClient,
-  isBrowserSupabaseConfigured,
-} from "@/lib/database/supabase-browser";
+import type { Session } from "@supabase/supabase-js";
+import { createLatestRequestScope } from "@/lib/auth/browser-request-scope";
 import { mostSpecificTopicId } from "@/lib/learning/topic-selection";
 import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
 import type {
@@ -30,11 +29,15 @@ const MISTAKE_OPTIONS = [
 ] as const;
 
 export function RecordResult({
+  configured,
+  session,
   source,
   subject,
   suggestedScore,
   suggestedMaximumMarks,
 }: {
+  configured: boolean;
+  session: Session | null;
   source?: SourceCitation;
   subject: Subject;
   suggestedScore?: number;
@@ -43,9 +46,11 @@ export function RecordResult({
   const topics = useMemo(
     () =>
       IBDP_TOPICS.filter(
-        (topic) => topic.subject === subject,
+        (topic) => topic.subject === subject &&
+          (source?.documentType !== "question-paper" ||
+            source.topicIds?.includes(topic.id) === true),
       ),
-    [subject],
+    [subject, source],
   );
   const defaultTopicId =
     mostSpecificTopicId(
@@ -84,11 +89,8 @@ export function RecordResult({
   );
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
-  const configured = isBrowserSupabaseConfigured();
-  const client = useMemo(
-    () => getBrowserSupabaseClient(),
-    [],
-  );
+  const [requests] = useState(createLatestRequestScope);
+  useEffect(() => () => requests.cancel(), [requests]);
 
   const selectedTopic = topics.find(
     (topic) => topic.id === topicId,
@@ -105,31 +107,31 @@ export function RecordResult({
   async function saveResult(event: FormEvent) {
     event.preventDefault();
 
+    if (requests.pending()) return;
     if (!topicId) {
       setStatus("Choose the topic this attempt tested.");
       return;
     }
 
-    if (!configured || !client) {
+    if (!configured) {
       setStatus("Progress sync is not configured yet.");
       return;
     }
-
-    const {
-      data: { session },
-    } = await client.auth.getSession();
 
     if (!session?.access_token) {
       setStatus("Sign in from the Progress panel first.");
       return;
     }
 
+    const request = requests.begin();
     setSaving(true);
     setStatus("");
 
     try {
       const response = await fetch("/api/progress", {
         method: "POST",
+        signal: request.signal,
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
@@ -154,6 +156,7 @@ export function RecordResult({
       const payload = (await response.json()) as {
         error?: string;
       };
+      if (!requests.isCurrent(request)) return;
       if (!response.ok) {
         throw new Error(
           payload.error ?? "Could not save progress.",
@@ -166,13 +169,14 @@ export function RecordResult({
         new CustomEvent("ib-progress-updated"),
       );
     } catch (error) {
+      if (!requests.isCurrent(request)) return;
       setStatus(
         error instanceof Error
           ? error.message
           : "Could not save progress.",
       );
     } finally {
-      setSaving(false);
+      if (requests.finish(request)) setSaving(false);
     }
   }
 

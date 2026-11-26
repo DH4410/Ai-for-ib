@@ -76,7 +76,7 @@ export function createSourceCatalogGetHandler(
       const sources =
         await dependencies.repository.listSources(subject);
 
-      return NextResponse.json({ sources });
+      return NextResponse.json({ sources }, { headers: { "Cache-Control": "private, no-store" } });
     } catch (error) {
       return errorResponse(error);
     }
