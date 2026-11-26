@@ -69,7 +69,7 @@ describe("chat request validation", () => {
         subject: "physics",
       }),
     ).toThrow(
-      "filters.timezone must look like TZ1, TZ2, or TZ3",
+      "filters.timezone must look like TZ0, TZ1, TZ2, TZ3, TZA, TZB, or TZC",
     );
   });
 
@@ -119,4 +119,18 @@ describe("chat request validation", () => {
       "filters.questionCount must be 1, 3, or 5",
     );
   });
+  it("accepts legacy paper years and lettered or zero timezones", () => {
+    for (const timezone of ["tz0", "tzA", "TZB", "tzC"]) {
+      expect(parseChatRequest({
+        subject: "physics", mode: "practice", message: "Find a paper",
+        filters: { years: [2000, 2017, 2026], timezone, paper: "p1", realPastPapersOnly: true },
+      }).filters).toMatchObject({ years: [2000, 2017, 2026], timezone: timezone.toUpperCase(), paper: "p1" });
+    }
+    for (const year of [1999, 2101]) {
+      expect(() => parseChatRequest({
+        subject: "physics", mode: "practice", message: "Find a paper", filters: { years: [year] },
+      })).toThrow("between 2000 and 2100");
+    }
+  });
+
 });

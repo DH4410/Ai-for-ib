@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   canRecordMarkResult,
+  canRecordMarkedProgress,
+  selectMarkSource,
+  sanitizeMarkAnswer,
   parseMarkSuggestion,
   recordableMarkSuggestion,
   stripMarkSuggestion,
@@ -140,4 +143,31 @@ describe("marker score footer", () => {
       ),
     ).toBeNull();
   });
+  it("prioritizes a real question even if it has no topic classification", () => {
+    const paper = {
+      documentType: "question-paper", id: "paper-q1", title: "Synthetic paper",
+      pairingStatus: "question_only" as const, marks: 3, markschemeAvailable: false, topicIds: [],
+    };
+    const textbook = { documentType: "textbook", id: "book", title: "Synthetic book", topicIds: ["topic"] };
+    expect(selectMarkSource([textbook, paper])).toBe(paper);
+    expect(canRecordMarkedProgress(selectMarkSource([textbook, paper]))).toBe(false);
+    const paired = { ...paper, pairingStatus: "paired" as const, markschemeAvailable: true };
+    expect(recordableMarkSuggestion("Feedback\nMARK: 2/3", paired)).not.toBeNull();
+    expect(canRecordMarkedProgress(paired)).toBe(false);
+    expect(canRecordMarkedProgress({ ...paired, topicIds: ["topic"] })).toBe(true);
+  });
+
+  it("rejects visual questions and impossible official mark totals", () => {
+    const paired = {
+      documentType: "question-paper", id: "paper-q1", title: "Synthetic paper",
+      pairingStatus: "paired" as const, marks: 3, markschemeAvailable: true, topicIds: ["topic"],
+    };
+    expect(canRecordMarkedProgress({ ...paired, visualContextRequired: true })).toBe(false);
+    expect(recordableMarkSuggestion("Feedback\nMARK: 2/3", { ...paired, visualContextRequired: true })).toBeNull();
+    for (const marks of [0, -1, Infinity, NaN]) {
+      expect(canRecordMarkResult({ ...paired, marks })).toBe(false);
+    }
+    expect(sanitizeMarkAnswer("Feedback\nMARK: 4/3", paired)).toBe("Feedback");
+  });
+
 });

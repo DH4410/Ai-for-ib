@@ -82,9 +82,9 @@ function parseFilters(value: unknown): ChatRequestFilters | undefined {
     if (
       !Array.isArray(value.years) ||
       value.years.length > 10 ||
-      value.years.some((year) => !Number.isInteger(year) || year < 2020 || year > 2030)
+      value.years.some((year) => !Number.isInteger(year) || year < 2000 || year > 2100)
     ) {
-      return invalid("filters.years must contain at most 10 years between 2020 and 2030");
+      return invalid("filters.years must contain at most 10 years between 2000 and 2100");
     }
     filters.years = [...new Set(value.years as number[])];
   }
@@ -117,10 +117,10 @@ function parseFilters(value: unknown): ChatRequestFilters | undefined {
   if (value.timezone !== undefined) {
     if (
       typeof value.timezone !== "string" ||
-      !/^TZ\d{1,2}$/i.test(value.timezone)
+      !/^TZ(?:\d{1,2}|[ABC])$/i.test(value.timezone)
     ) {
       return invalid(
-        "filters.timezone must look like TZ1, TZ2, or TZ3",
+        "filters.timezone must look like TZ0, TZ1, TZ2, TZ3, TZA, TZB, or TZC",
       );
     }
     filters.timezone =

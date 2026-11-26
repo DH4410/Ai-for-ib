@@ -16,7 +16,7 @@ import { formatLearnerContext } from "@/lib/learning/context";
 import {
   SupabaseLearningProgressRepository,
 } from "@/lib/learning/repository";
-import { sanitizeMarkAnswer } from "@/lib/marking/score";
+import { sanitizeMarkAnswer, selectMarkSource } from "@/lib/marking/score";
 import { generateTutorAnswer } from "@/lib/model";
 import { formatRealPastPaperPractice } from "@/lib/past-papers/practice";
 import { buildSystemPrompt } from "@/lib/prompt";
@@ -86,7 +86,7 @@ export function createChatPostHandler(
           parsedRequest.subject,
         );
 
-      const sources =
+      const retrievedSources =
         await dependencies.retrieveStudyContext({
           filters: parsedRequest.filters,
           limit:
@@ -99,10 +99,22 @@ export function createChatPostHandler(
           subject: parsedRequest.subject,
         });
 
-      if (
-        parsedRequest.filters?.pastPaperQuestionId &&
-        sources.length === 0
-      ) {
+      const pinnedId = parsedRequest.filters?.pastPaperQuestionId;
+      // Even a future retrieval implementation returning extra/fuzzy results
+      // must not let a different paper or an unsupported visual question
+      // stand in for the learner's pinned question.
+      const sources = pinnedId
+        ? retrievedSources.filter((source) =>
+            source.id === pinnedId &&
+            source.documentType === "question-paper" &&
+            source.subject === parsedRequest.subject &&
+            !(parsedRequest.mode === "mark" && source.visualContextRequired),
+          ).slice(0, 1)
+        : parsedRequest.mode === "mark"
+          ? retrievedSources.filter((source) => !source.visualContextRequired)
+          : retrievedSources;
+
+      if (pinnedId && sources.length === 0) {
         const response: TutorResponse = {
           answer:
             "I can no longer load the exact past-paper question you selected, so I won't mark your answer against a different question. Re-open a real paper question and choose “Mark this” again.",
@@ -159,10 +171,7 @@ export function createChatPostHandler(
           { role: "user", content: parsedRequest.message },
         ],
       });
-      const markSource = sources.find(
-        ({ documentType }) =>
-          documentType === "question-paper",
-      ) ?? sources[0];
+      const markSource = selectMarkSource(sources);
       const answer =
         parsedRequest.mode === "mark"
           ? sanitizeMarkAnswer(

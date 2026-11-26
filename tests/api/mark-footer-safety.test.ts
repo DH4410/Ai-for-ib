@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createChatPostHandler,
@@ -96,4 +96,53 @@ describe("server mark footer safety", () => {
     expect(response.status).toBe(200);
     expect(body.answer).toContain("MARK: 2/3");
   });
+  it("refuses to mark a different retrieved question or a visual-dependent pinned question", async () => {
+    const generateTutorAnswer = vi.fn(async () => ({ model: "unexpected", text: "MARK: 2/3" }));
+    const source = {
+      documentType: "question-paper", id: "physics-m25-hl-tz2-p2-qp-q4",
+      subject: "physics" as const, title: "Synthetic paper", text: "Synthetic question",
+      marks: 3, markschemeAvailable: true, pairingStatus: "paired" as const,
+    };
+    for (const candidate of [
+      { ...source, id: "different-question" },
+      { ...source, visualContextRequired: true },
+      { ...source, subject: "chemistry" as const },
+    ]) {
+      const handler = createChatPostHandler({
+        generateTutorAnswer,
+        retrieveStudyContext: async () => [candidate],
+      });
+      const response = await handler(markRequest());
+      const body = await response.json();
+      expect(body.model).toBe("retrieval-only");
+      expect(body.sources).toEqual([]);
+    }
+    expect(generateTutorAnswer).not.toHaveBeenCalled();
+  });
+
+  it("only sends the pinned question to the model when retrieval contains extra results", async () => {
+    let capturedSystem = "";
+    const handler = createChatPostHandler({
+      generateTutorAnswer: async ({ system }) => {
+        capturedSystem = system;
+        return { model: "test", text: "Feedback\nMARK: 2/3" };
+      },
+      retrieveStudyContext: async () => [
+        { id: "different", title: "Other", documentType: "question-paper", subject: "physics", text: "unrelated private fixture" },
+        {
+          id: "physics-m25-hl-tz2-p2-qp-q4", title: "Pinned", documentType: "question-paper",
+          subject: "physics", text: "selected synthetic question", pairingStatus: "paired",
+          markschemeAvailable: true, marks: 3,
+        },
+      ],
+    });
+    const response = await handler(markRequest());
+    const body = await response.json();
+    expect(body.sources).toHaveLength(1);
+    expect(body.sources[0].id).toBe("physics-m25-hl-tz2-p2-qp-q4");
+    expect(capturedSystem).toContain("selected synthetic question");
+    expect(capturedSystem).not.toContain("unrelated private fixture");
+    expect(body.answer).toContain("MARK: 2/3");
+  });
+
 });

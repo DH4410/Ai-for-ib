@@ -52,10 +52,7 @@ export function recordableMarkSuggestion(
 
   if (source?.documentType === "question-paper") {
     if (
-      source.pairingStatus !== "paired" ||
-      source.markschemeAvailable !== true ||
-      source.marks === undefined ||
-      source.marks === null ||
+      !canRecordMarkResult(source) ||
       source.marks !== suggestion.maximumMarks
     ) {
       return null;
@@ -77,7 +74,9 @@ export function sanitizeMarkAnswer(
 ): string {
   const suggestion = parseMarkSuggestion(text);
   if (!suggestion) {
-    return text;
+    // Strip malformed/impossible numeric final footers too; they are not
+    // evidence and should not be presented as a trusted score.
+    return stripMarkSuggestion(text);
   }
 
   return recordableMarkSuggestion(text, source)
@@ -96,7 +95,22 @@ export function canRecordMarkResult(
   return (
     source.pairingStatus === "paired" &&
     source.markschemeAvailable === true &&
-    source.marks !== undefined &&
-    source.marks !== null
+    !source.visualContextRequired &&
+    typeof source.marks === "number" &&
+    Number.isFinite(source.marks) &&
+    source.marks > 0
   );
+}
+
+/** Use the same source for server scoring and browser progress controls. */
+export function selectMarkSource<T extends SourceCitation>(sources: readonly T[] | undefined): T | undefined {
+  return sources?.find((source) => source.documentType === "question-paper") ??
+    sources?.find((source) => (source.topicIds?.length ?? 0) > 0) ??
+    sources?.[0];
+}
+
+/** An official paper must have a mapped topic before its result can be saved. */
+export function canRecordMarkedProgress(source: SourceCitation | undefined): boolean {
+  return canRecordMarkResult(source) &&
+    (source?.documentType !== "question-paper" || (source.topicIds?.length ?? 0) > 0);
 }

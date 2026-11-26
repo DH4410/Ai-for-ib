@@ -43,9 +43,11 @@ export function RecordResult({
   const topics = useMemo(
     () =>
       IBDP_TOPICS.filter(
-        (topic) => topic.subject === subject,
+        (topic) => topic.subject === subject &&
+          (source?.documentType !== "question-paper" ||
+            source.topicIds?.includes(topic.id) === true),
       ),
-    [subject],
+    [subject, source],
   );
   const defaultTopicId =
     mostSpecificTopicId(

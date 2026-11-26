@@ -180,7 +180,8 @@ export function createStudyRetriever({
 
       if (
         !question ||
-        question.subject !== args.subject
+        question.subject !== args.subject ||
+        (mode === "mark" && question.visualContextRequired)
       ) {
         return [];
       }
@@ -204,9 +205,9 @@ export function createStudyRetriever({
         years: args.filters?.years,
       });
 
-      return questions.map((question) =>
-        toPastPaperSourceChunk(question, mode),
-      );
+      return questions
+        .filter((question) => mode !== "mark" || !question.visualContextRequired)
+        .map((question) => toPastPaperSourceChunk(question, mode));
     }
 
     const lexicalQuery =

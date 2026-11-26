@@ -13,7 +13,9 @@ import { SourceLibraryPanel } from "@/components/SourceLibraryPanel";
 import { getBrowserSupabaseClient } from "@/lib/database/supabase-browser";
 import {
   canRecordMarkResult,
+  canRecordMarkedProgress,
   recordableMarkSuggestion,
+  selectMarkSource,
   stripMarkSuggestion,
 } from "@/lib/marking/score";
 import { IBDP_TOPICS } from "@/lib/taxonomy/ibdp";
@@ -47,11 +49,13 @@ const paperOptionsBySubject: Record<
   Array<{ value: string; label: string }>
 > = {
   physics: [
+    { value: "p1", label: "Paper 1 (older syllabus)" },
     { value: "p1a", label: "Paper 1A" },
     { value: "p1b", label: "Paper 1B" },
     { value: "p2", label: "Paper 2" },
   ],
   chemistry: [
+    { value: "p1", label: "Paper 1 (older syllabus)" },
     { value: "p1a", label: "Paper 1A" },
     { value: "p1b", label: "Paper 1B" },
     { value: "p2", label: "Paper 2" },
@@ -63,13 +67,15 @@ const paperOptionsBySubject: Record<
   ],
 };
 
+const latestPaperYear = Math.min(new Date().getUTCFullYear(), 2100);
 const paperYears = Array.from(
-  { length: 7 },
-  (_, index) => 2026 - index,
+  { length: Math.max(0, latestPaperYear - 1999) },
+  (_, index) => latestPaperYear - index,
 );
 
 type VisibleTurn = ChatTurn & {
   sources?: TutorResponse["sources"];
+  markingUnavailable?: boolean;
   mode: StudyMode;
   subject: Subject;
 };
@@ -79,7 +85,8 @@ function markSuggestion(
 ) {
   if (
     turn.role !== "assistant" ||
-    turn.mode !== "mark"
+    turn.mode !== "mark" ||
+    turn.markingUnavailable
   ) {
     return null;
   }
@@ -102,9 +109,7 @@ function visibleTurnContent(
 function progressSource(
   turn: VisibleTurn,
 ): SourceCitation | undefined {
-  return turn.sources?.find(
-    (source) => (source.topicIds?.length ?? 0) > 0,
-  );
+  return selectMarkSource(turn.sources);
 }
 
 export function TutorShell() {
@@ -285,6 +290,7 @@ export function TutorShell() {
           role: "assistant",
           content: payload.answer,
           sources: payload.sources,
+          markingUnavailable: mode === "mark" && payload.model === "retrieval-only",
           mode,
           subject,
         },
@@ -294,6 +300,7 @@ export function TutorShell() {
         ...current,
         {
           role: "assistant",
+          markingUnavailable: true,
           content:
             "I could not reach the model backend. " +
             (error instanceof Error
@@ -549,9 +556,9 @@ export function TutorShell() {
                     value={timezoneFilter}
                   >
                     <option value="">Any timezone</option>
-                    <option value="TZ1">TZ1</option>
-                    <option value="TZ2">TZ2</option>
-                    <option value="TZ3">TZ3</option>
+                    {["TZ0", "TZ1", "TZ2", "TZ3", "TZA", "TZB", "TZC"].map((timezone) => (
+                      <option key={timezone} value={timezone}>{timezone}</option>
+                    ))}
                   </select>
                 </label>
 
@@ -634,7 +641,7 @@ export function TutorShell() {
                 </button>
 
                 <span className="verifiedSourceNote">
-                  Exact indexed wording
+                  Exact indexed wording · older papers may use a previous syllabus.
                 </span>
               </div>
             ) : (
@@ -784,9 +791,8 @@ export function TutorShell() {
                   {turn.role === "assistant" &&
                   turn.mode === "mark" &&
                   turn.subject &&
-                  canRecordMarkResult(
-                    progressSource(turn),
-                  ) ? (
+                  !turn.markingUnavailable &&
+                  canRecordMarkedProgress(progressSource(turn)) ? (
                     <RecordResult
                       source={progressSource(turn)}
                       subject={turn.subject}
@@ -799,13 +805,11 @@ export function TutorShell() {
                     />
                   ) : turn.role === "assistant" &&
                     turn.mode === "mark" &&
-                    progressSource(turn)?.documentType ===
-                      "question-paper" ? (
+                    progressSource(turn)?.documentType === "question-paper" ? (
                     <p className="unscoredPaperNote">
-                      Qualitative feedback only · this paper
-                      question has no verified paired official
-                      markscheme, so it cannot be saved as an
-                      official scored attempt.
+                      {canRecordMarkResult(progressSource(turn))
+                        ? "This question needs a verified topic mapping before its mark can be saved to mastery."
+                        : "A verified paired markscheme, maximum mark and text-only question are required to save an official scored attempt."}
                     </p>
                   ) : null}
                 </article>
